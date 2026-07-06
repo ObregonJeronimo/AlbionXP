@@ -34,7 +34,11 @@ export default {
       if (request.method === 'POST' && url.pathname === '/webhook') return await webhook(request, env);
       if (request.method === 'GET' && url.pathname === '/ads') return ads(env);
       if (request.method === 'POST' && url.pathname === '/ads/track') return await adsTrack(request, env);
-      return json({ ok: true, service: 'albion-silver-hub-payments' });
+      // --- analítica del panel de admin ---
+      if (request.method === 'POST' && url.pathname === '/beat') return await beat(request, env);
+      if (request.method === 'POST' && url.pathname === '/hit') return await hit(request, env);
+      if (request.method === 'GET' && url.pathname === '/admin') return await adminStats(url, env);
+      return json({ ok: true, service: 'albion-silver-hub-backend' });
     } catch (e) {
       console.log('ERROR', e.message);
       return json({ error: String(e.message || e) }, 500);
@@ -204,6 +208,113 @@ async function adsTrack(request, env) {
     });
   }
   return json({ ok: true });
+}
+
+// ---------- Analítica: presencia (online en vivo) ----------
+// La app manda un "latido" cada ~60s con un id anónimo. Un usuario está "online"
+// si latió en los últimos 120s. Guardamos presence/{sid} = { t }.
+async function beat(request, env) {
+  const { sid } = await request.json().catch(() => ({}));
+  const id = String(sid || '').replace(/[^\w-]/g, '').slice(0, 40);
+  if (!id) return json({ ok: false });
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/presence/${id}`;
+  await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fields: { t: { integerValue: String(Date.now()) } } }),
+  });
+  return json({ ok: true });
+}
+
+// ---------- Analítica: visitas web ----------
+async function hit(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const day = new Date().toISOString().slice(0, 10);
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const doc = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/stats/counters`;
+  await fetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:commit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      writes: [{
+        transform: {
+          document: doc,
+          fieldTransforms: [
+            { fieldPath: 'visitsTotal', increment: { integerValue: '1' } },
+            { fieldPath: `visits_${day.replace(/-/g, '_')}`, increment: { integerValue: '1' } },
+          ],
+        },
+      }],
+    }),
+  });
+  return json({ ok: true });
+}
+
+// ---------- Panel de admin (protegido por clave) ----------
+async function adminStats(url, env) {
+  if (url.searchParams.get('key') !== env.ADMIN_KEY) return json({ error: 'no autorizado' }, 401);
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+  // Online: contar presencia reciente y limpiar viejas
+  let online = 0;
+  try {
+    const r = await fetch(`${base}/presence?pageSize=1000`, { headers: { Authorization: `Bearer ${token}` } });
+    const docs = (await r.json()).documents || [];
+    const cutoff = Date.now() - 120000;
+    const stale = [];
+    for (const d of docs) {
+      const t = Number(d.fields?.t?.integerValue || 0);
+      if (t >= cutoff) online++;
+      else if (t < Date.now() - 3600000) stale.push(d.name.split('/').pop());
+    }
+    // housekeeping: borrar hasta 50 presencias muy viejas por consulta
+    for (const s of stale.slice(0, 50)) {
+      fetch(`${base}/presence/${s}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    }
+  } catch (_) { /* ignora */ }
+
+  // Visitas
+  let visitsTotal = 0, visitsToday = 0;
+  try {
+    const r = await fetch(`${base}/stats/counters`, { headers: { Authorization: `Bearer ${token}` } });
+    if (r.ok) {
+      const f = (await r.json()).fields || {};
+      visitsTotal = Number(f.visitsTotal?.integerValue || 0);
+      const dk = `visits_${new Date().toISOString().slice(0, 10).replace(/-/g, '_')}`;
+      visitsToday = Number(f[dk]?.integerValue || 0);
+    }
+  } catch (_) { /* ignora */ }
+
+  // Descargas: sumatoria real desde GitHub Releases
+  let downloads = 0, byVersion = [];
+  try {
+    const r = await fetch(`https://api.github.com/repos/${env.GH_REPO || 'ObregonJeronimo/AlbionXP'}/releases?per_page=100`,
+      { headers: { 'User-Agent': 'albion-admin', Accept: 'application/vnd.github+json' } });
+    const rels = await r.json();
+    for (const rel of (Array.isArray(rels) ? rels : [])) {
+      let n = 0;
+      for (const a of (rel.assets || [])) if (a.name.endsWith('.exe')) n += a.download_count || 0;
+      if (n) byVersion.push({ tag: rel.tag_name, downloads: n });
+      downloads += n;
+    }
+  } catch (_) { /* ignora */ }
+
+  return json({
+    online,
+    visitsToday,
+    visitsTotal,
+    downloads,
+    byVersion,
+    // Enlaces a los paneles reales de ingresos (no tienen API pública simple):
+    links: {
+      cpm: 'https://publishers.monetag.com/',
+      cafecito: 'https://cafecito.app/',
+      mercadopago: 'https://www.mercadopago.com.ar/activities',
+    },
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 // ---------- Firestore write with service account (bypasses security rules) ----------

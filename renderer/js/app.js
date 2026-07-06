@@ -21,6 +21,23 @@ function renderNavIcons() {
   });
 }
 
+// Anonymous "online now" heartbeat for the private admin panel (opt-in via
+// analyticsUrl in appconfig). No personal data — just a random per-install id.
+async function startHeartbeat(analyticsUrl) {
+  if (!analyticsUrl) return;
+  const url = analyticsUrl.replace(/\/$/, '') + '/beat';
+  let s = {};
+  try { s = await window.albion.getSettings(); } catch (_) { /* ignore */ }
+  let sid = s && s.anonId;
+  if (!sid) {
+    sid = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'a' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    try { await window.albion.setSettings({ anonId: sid }); } catch (_) { /* ignore */ }
+  }
+  const beat = () => { window.albion.postJson(url, { sid }).catch(() => {}); };
+  beat();
+  setInterval(beat, 60000);
+}
+
 // Community links (web / forum / donate) — open in the browser.
 function renderCommunityLinks() {
   const c = APP_CONFIG.community || {};
@@ -168,6 +185,7 @@ freshSel.addEventListener('change', async () => {
   // Remote config (community links + ads) — editable from the site, no rebuild.
   const remote = await loadRemoteConfig();
   if (remote && remote.community) Object.assign(APP_CONFIG.community, remote.community);
+  startHeartbeat(remote && remote.analyticsUrl);
 
   navigate('dashboard');
   renderCommunityLinks();

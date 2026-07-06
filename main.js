@@ -28,6 +28,7 @@ const ALLOWED_HOSTS = [
   /^api\.groq\.com$/,                 // optional AI
   /^openrouter\.ai$/,                 // optional AI
   /^ollama\.com$/,                    // Ollama installer
+  /(^|\.)workers\.dev$/,              // backend/analytics worker (Cloudflare)
   /^(127\.0\.0\.1|localhost)$/,       // local Ollama server
 ];
 function hostAllowed(urlStr) {
