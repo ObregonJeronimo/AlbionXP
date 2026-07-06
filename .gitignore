@@ -1,0 +1,17 @@
+# Dependencias e instalables (se generan; no van al repo)
+node_modules/
+dist/
+
+# Artefactos temporales
+build/icon-src.png
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Secretos (nunca subir)
+*firebase-adminsdk*.json
+.env
+.env.*

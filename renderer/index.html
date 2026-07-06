@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://render.albiononline.com data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>Albion Silver Hub</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="update-toast">
+    <span class="ut-text"></span>
+    <button class="ut-btn">Reiniciar y actualizar</button>
+  </div>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="brand">
+        <div class="brand-icon">⚔️</div>
+        <div class="brand-text">
+          <div class="brand-title">Albion Silver Hub</div>
+          <div class="brand-sub">Inteligencia de mercado</div>
+        </div>
+      </div>
+
+      <nav id="nav">
+        <button class="nav-item active" data-view="dashboard"><span class="nav-ico">🏠</span> Dashboard</button>
+        <button class="nav-item" data-view="planner"><span class="nav-ico">🧭</span> Plan de plata</button>
+        <div class="nav-section">Mercados</div>
+        <button class="nav-item" data-view="compare"><span class="nav-ico">⚖️</span> Comparador</button>
+        <button class="nav-item" data-view="flip"><span class="nav-ico">🚚</span> Transporte / Flip</button>
+        <button class="nav-item" data-view="sniper"><span class="nav-ico">🎯</span> Sniper de gangas</button>
+        <button class="nav-item" data-view="volume"><span class="nav-ico">📊</span> Movimiento</button>
+        <div class="nav-section">Producción</div>
+        <button class="nav-item" data-view="refine"><span class="nav-ico">⛏️</span> Refinado</button>
+        <button class="nav-item" data-view="craft"><span class="nav-ico">🔨</span> Crafteo</button>
+        <button class="nav-item" data-view="blackmarket"><span class="nav-ico">🌑</span> Mercado Negro</button>
+        <div class="nav-section">Inversión</div>
+        <button class="nav-item" data-view="gold"><span class="nav-ico">🪙</span> Oro</button>
+        <button class="nav-item" data-view="guide"><span class="nav-ico">📖</span> Guía de estrategias</button>
+        <div class="nav-section">Comunidad</div>
+        <button class="nav-item" data-view="forum"><span class="nav-ico">💬</span> Foro</button>
+      </nav>
+
+      <div class="ad-slot" id="ad-sidebar"></div>
+
+      <div id="settings-panel">
+        <label class="set-row">
+          <span>Servidor</span>
+          <select id="set-server">
+            <option value="west">América (West)</option>
+            <option value="europe">Europa</option>
+            <option value="east">Asia (East)</option>
+          </select>
+        </label>
+        <label class="set-row set-check">
+          <input type="checkbox" id="set-premium" checked />
+          <span>Cuenta Premium (impuesto 4%)</span>
+        </label>
+        <label class="set-row">
+          <span>Frescura de datos</span>
+          <select id="set-freshness">
+            <option value="30">Solo última ½ hora</option>
+            <option value="60" selected>Última hora</option>
+            <option value="180">Últimas 3 horas</option>
+            <option value="360">Últimas 6 horas</option>
+            <option value="1440">Últimas 24 horas</option>
+          </select>
+        </label>
+        <div id="data-status" class="data-status">Cargando items…</div>
+        <div id="community-links" class="community-links"></div>
+      </div>
+    </aside>
+
+    <main id="main">
+      <div class="ad-slot ad-top" id="ad-top"></div>
+      <div id="view-container"></div>
+    </main>
+  </div>
+
+  <script src="vendor/chart.umd.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

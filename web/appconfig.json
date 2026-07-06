@@ -1,0 +1,29 @@
+{
+  "community": {
+    "siteUrl": "https://albion-xp.vercel.app/",
+    "donateUrl": "https://cafecito.app/albionxp"
+  },
+  "ads": [
+    {
+      "id": "donate",
+      "title": "☕ Invítanos un café",
+      "body": "Apoya el desarrollo — el sistema es y será gratis",
+      "url": "https://cafecito.app/albionxp",
+      "color": "#3fb950"
+    },
+    {
+      "id": "web",
+      "title": "🌐 albion-xp.vercel.app",
+      "body": "Novedades y comunidad del sistema",
+      "url": "https://albion-xp.vercel.app/",
+      "color": "#58a6ff"
+    },
+    {
+      "id": "sponsor-slot",
+      "title": "📢 Tu anuncio aquí",
+      "body": "Patrocina Albion Silver Hub",
+      "url": "mailto:jeroobregon03@gmail.com?subject=Patrocinio%20Albion%20Silver%20Hub",
+      "color": "#e3b341"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "albion-silver-hub",
+  "version": "0.1.1",
+  "description": "Albion Online market intelligence desktop app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win dir",
+    "installer": "electron-builder --win nsis",
+    "release": "electron-builder --win nsis --publish always"
+  },
+  "keywords": [],
+  "author": "Albion Silver Hub",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3",
+    "puppeteer-core": "^25.3.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "electron-updater": "^6.8.9"
+  },
+  "build": {
+    "appId": "com.albion.silverhub",
+    "productName": "Albion Silver Hub",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "dir"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "AlbionSilverHub-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ObregonJeronimo",
+        "repo": "AlbionXP"
+      }
+    ]
+  }
+}
