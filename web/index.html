@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Albion Silver Hub — Haz plata en Albion Online con datos reales</title>
-  <meta name="description" content="App de escritorio gratuita que analiza el mercado de Albion Online y te dice, paso a paso, cómo hacer plata: transporte, refinado, crafteo, mercado negro y más." />
+  <title>Albion Silver Hub — Forjá tu fortuna en Albion Online</title>
+  <meta name="description" content="App de escritorio gratuita que analiza el mercado de Albion Online y te dice, paso a paso, cómo hacer plata: transporte, refinado, crafteo, mercado negro, oro y un coach con IA." />
   <link rel="stylesheet" href="css/site.css" />
 </head>
 <body>
+  <div id="page">
   <nav>
     <div class="wrap">
-      <div class="brand"><span class="logo">⚔️</span> <span>Albion <span class="gold">Silver Hub</span></span></div>
+      <div class="brand"><span class="sigil">⚔️</span> <b>Albion <span>Silver Hub</span></b></div>
       <div class="nav-links">
-        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#arsenal">El arsenal</a>
         <a href="guias/index.html">Guías</a>
-        <a href="#por-que-gratis">Por qué es gratis</a>
+        <a href="#sostiene">Por qué es gratis</a>
         <a href="#comunidad">Comunidad</a>
         <a class="btn" id="nav-download" href="#">Descargar</a>
       </div>
@@ -22,103 +23,199 @@
   </nav>
 
   <header class="hero">
+    <div class="glow"></div>
     <div class="wrap">
-      <span class="badge">100% gratis · sin registro · para Windows</span>
-      <h1>Haz una <span class="gold">wasada de plata</span><br>en Albion Online</h1>
-      <p class="lead">Una app de escritorio que analiza el mercado en tiempo real y te dice
-        exactamente qué comprar, dónde y cuándo para ganar plata: transporte entre ciudades,
-        refinado, crafteo, mercado negro y un coach con IA que te arma el plan paso a paso.</p>
+      <span class="eyebrow">Mercado · Albion Online</span>
+      <h1 class="display">Forjá una <span class="ag">wasada de plata</span><br>en <span class="ore">Albion Online</span></h1>
+      <p class="sub">Una app de escritorio que lee el mercado en tiempo real y te dice exactamente
+        qué comprar, dónde y cuándo. Transporte, refinado, crafteo, mercado negro y un coach con IA
+        que te arma el plan paso a paso.</p>
       <div class="hero-cta">
-        <a class="btn big" id="hero-download" href="#">⬇️ Descargar gratis</a>
-        <a class="btn big ghost" href="#como-funciona">Ver qué hace</a>
+        <a class="btn big" id="hero-download" href="#">⬇ Descargar gratis</a>
+        <a class="btn big ghost" href="#arsenal">Ver el arsenal</a>
       </div>
-      <p class="fine" id="version-line">Versión — · Windows 10/11 · se actualiza sola</p>
+    </div>
+    <div class="ribbon wrap" style="max-width:920px">
+      <div class="stat"><div class="num">9</div><div class="lbl">Herramientas</div></div>
+      <div class="stat"><div class="num">100%</div><div class="lbl">Gratis</div></div>
+      <div class="stat"><div class="num">0</div><div class="lbl">Registro</div></div>
+      <div class="stat"><div class="num">Auto</div><div class="lbl">Actualización</div></div>
     </div>
   </header>
 
-  <section id="como-funciona">
+  <!-- EL ARSENAL -->
+  <section id="arsenal">
     <div class="wrap">
-      <h2>Qué hace por ti</h2>
-      <p class="section-sub">Todas las formas de hacer plata del juego, calculadas con precios y
-        volúmenes reales (impuestos incluidos). Tú eliges cuánto quieres arriesgar.</p>
-      <div class="grid">
-        <div class="tool"><div class="ico">🧭</div><h3>Plan de plata</h3><p>Di cuánta plata quieres y cuánto capital tienes: te arma rutas paso a paso con inversión y tiempo estimado. Un coach con IA local lo explica.</p></div>
-        <div class="tool"><div class="ico">🚚</div><h3>Transporte / Flip</h3><p>Compra barato en una ciudad, vende caro en otra. Ranking por beneficio real y por kg de carga.</p></div>
-        <div class="tool"><div class="ico">⛏️</div><h3>Refinado</h3><p>Compra materia prima, refina en la ciudad con bono (hasta 54% de retorno) y revende con ganancia.</p></div>
-        <div class="tool"><div class="ico">🔨</div><h3>Crafteo</h3><p>Recetas reales del juego + escáner de qué conviene craftear y vender al Mercado Negro.</p></div>
-        <div class="tool"><div class="ico">🌑</div><h3>Mercado Negro</h3><p>Compra equipo en las ciudades y véndeselo caro al Mercado Negro de Caerleon.</p></div>
-        <div class="tool"><div class="ico">🎯</div><h3>Sniper de gangas</h3><p>Detecta items listados muy por debajo de su precio histórico para revender al instante.</p></div>
-        <div class="tool"><div class="ico">📊</div><h3>Movimiento</h3><p>Qué se está comerciando más en cada mercado ahora mismo: dónde hay demanda de verdad.</p></div>
-        <div class="tool"><div class="ico">🪙</div><h3>Oro</h3><p>Gráfico del oro con señal de compra/venta para invertir tu plata sin impuestos.</p></div>
+      <div class="section-head reveal">
+        <span class="eyebrow">El arsenal</span>
+        <h2>Todas las formas de hacer plata</h2>
+        <p>Cada estrategia del juego, calculada con precios y volúmenes reales, impuestos incluidos.
+          Vos elegís cuánto arriesgar.</p>
+      </div>
+      <div class="armory reveal">
+        <div class="cat"><span class="eyebrow">Inteligencia</span></div>
+        <div class="tool">
+          <div class="medallion">🧭</div>
+          <div><h3>Plan de plata</h3><p>Decís cuánta plata querés y cuánto capital tenés; te arma la ruta más rápida paso a paso. Un coach con IA local lo explica.</p></div>
+        </div>
+        <div class="cat"><span class="eyebrow">Mercados</span></div>
+        <div class="tool">
+          <div class="medallion">⚖️</div>
+          <div><h3>Comparador</h3><p>El precio de cualquier item en las 7 ciudades y el Mercado Negro, con su histórico.</p></div>
+        </div>
+        <div class="tool">
+          <div class="medallion">🚚</div>
+          <div><h3>Transporte / Flip</h3><p>Comprá barato en una ciudad, vendé caro en otra. Ranking por beneficio y por kilo de carga.</p></div>
+        </div>
+        <div class="tool">
+          <div class="medallion">🎯</div>
+          <div><h3>Sniper de gangas</h3><p>Detecta items listados muy por debajo de su media histórica para revender al instante.</p></div>
+        </div>
+        <div class="tool">
+          <div class="medallion">📊</div>
+          <div><h3>Movimiento</h3><p>Qué se comercia más en cada mercado ahora mismo: dónde hay demanda de verdad.</p></div>
+        </div>
+        <div class="cat"><span class="eyebrow">Producción</span></div>
+        <div class="tool">
+          <div class="medallion">⛏️</div>
+          <div><h3>Refinado</h3><p>Comprá materia prima, refiná en la ciudad con bono (hasta 54% de retorno) y revendé con ganancia.</p></div>
+        </div>
+        <div class="tool">
+          <div class="medallion">🔨</div>
+          <div><h3>Crafteo</h3><p>Recetas reales del juego + escáner de qué conviene craftear y vender al Mercado Negro.</p></div>
+        </div>
+        <div class="tool">
+          <div class="medallion">🌑</div>
+          <div><h3>Mercado Negro</h3><p>Comprá equipo en las ciudades y vendéselo caro al Mercado Negro de Caerleon.</p></div>
+        </div>
+        <div class="cat"><span class="eyebrow">Inversión</span></div>
+        <div class="tool">
+          <div class="medallion">🪙</div>
+          <div><h3>Oro</h3><p>Gráfico del oro con señal de compra/venta para invertir tu plata sin impuestos.</p></div>
+        </div>
       </div>
     </div>
   </section>
 
-  <section>
+  <!-- CÓMO TE AYUDA -->
+  <section class="band">
     <div class="wrap">
-      <h2>Cómo te ayuda a ganar</h2>
-      <p class="section-sub">No es magia ni bots: es información. La misma que usan los mejores
-        traders del juego, calculada por ti en segundos.</p>
-      <div class="help-cols">
-        <div class="help-card">
+      <div class="section-head reveal">
+        <span class="eyebrow">Cómo te ayuda</span>
+        <h2>No es magia ni bots: es información</h2>
+        <p>La misma que usan los mejores traders del juego, calculada por vos en segundos.</p>
+      </div>
+      <div class="paths reveal">
+        <div class="path">
           <h3>Para empezar de cero</h3>
           <ul>
-            <li>Rutas de transporte de bajo riesgo con poca inversión</li>
-            <li>Gangas para comprar y revender en la misma ciudad</li>
-            <li>El coach te dice el camino más rápido a tu primer millón</li>
+            <li>Rutas de transporte de bajo riesgo con poca inversión.</li>
+            <li>Gangas para comprar y revender en la misma ciudad.</li>
+            <li>El coach te dice el camino más rápido a tu primer millón.</li>
           </ul>
         </div>
-        <div class="help-card">
+        <div class="path">
           <h3>Para escalar</h3>
           <ul>
-            <li>Cadenas de refinado + crafteo con bonos de ciudad</li>
-            <li>Flips al Mercado Negro con beneficios de cientos de miles</li>
-            <li>Datos frescos configurables: última media hora, hora o día</li>
+            <li>Cadenas de refinado y crafteo con bonos de ciudad.</li>
+            <li>Flips al Mercado Negro con beneficios de cientos de miles.</li>
+            <li>Frescura de datos configurable: última media hora, hora o día.</li>
           </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="por-que-gratis" class="free">
+  <!-- POR QUÉ ES GRATIS -->
+  <section id="sostiene">
     <div class="wrap">
-      <h2>Por qué es gratis y cómo nos mantenemos</h2>
-      <p class="section-sub">Creemos que una herramienta así debe ser gratis para todos. No hay
-        muros de pago ni funciones bloqueadas. Nos sostenemos de forma transparente:</p>
-      <div class="pillars">
-        <div class="pillar"><div class="ico">🤝</div><h4>Anuncios de afiliados</h4><p>Anuncios no invasivos en una esquina. Si compras algo por nuestros links (juegos, keys), nos llevamos una pequeña comisión — sin costo extra para ti.</p></div>
-        <div class="pillar"><div class="ico">📢</div><h4>Publicidad y patrocinios</h4><p>Marcas y gremios pueden patrocinar un espacio. Publicidad en esta web. Nada que interrumpa tu uso.</p></div>
-        <div class="pillar"><div class="ico">❤️</div><h4>Donaciones</h4><p>Si la app te hizo plata y quieres apoyar el desarrollo, puedes invitarnos un café. Totalmente voluntario.</p></div>
+      <div class="section-head reveal">
+        <span class="eyebrow">Por qué es gratis</span>
+        <h2>Cómo se sostiene el proyecto</h2>
+        <p>Sin muros de pago ni funciones bloqueadas. Nos mantenemos de forma transparente.</p>
       </div>
-      <div class="promise">
-        <h4>Nuestro compromiso contigo</h4>
+      <div class="ledger reveal">
+        <div class="item">
+          <div class="k"><span class="mk">✦</span> Anuncios discretos</div>
+          <p>Publicidad no invasiva en una esquina, y links de afiliados: si comprás algo por ellos, nos llevamos una comisión sin costo extra para vos.</p>
+        </div>
+        <div class="item">
+          <div class="k"><span class="mk">✦</span> Patrocinios</div>
+          <p>Marcas y gremios pueden patrocinar un espacio. Nada que interrumpa tu uso ni que bloquee funciones.</p>
+        </div>
+        <div class="item">
+          <div class="k"><span class="mk">✦</span> Donaciones</div>
+          <p>Si la app te hizo plata y querés apoyar el desarrollo, podés invitarnos un café. Totalmente voluntario.</p>
+        </div>
+      </div>
+      <div class="pledge reveal">
+        <h4>Nuestro juramento</h4>
         <ul>
           <li>Nunca venderemos tus datos.</li>
           <li>Nunca bloquearemos funciones detrás de un pago.</li>
-          <li>Nunca anuncios de venta de plata/oro por dinero real (RMT): va contra los términos de Albion y contra ti.</li>
+          <li>Nunca anuncios de venta de plata por dinero real (RMT): va contra los términos de Albion y contra vos.</li>
           <li>Los anuncios jamás te impedirán usar el sistema.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <section id="comunidad">
+  <!-- GUÍAS -->
+  <section class="band">
     <div class="wrap">
-      <div class="callout">
-        <h2>💬 Comunidad dentro de la app</h2>
-        <p>La app trae un foro donde los usuarios comparten rutas, resuelven dudas y votan los
-          mejores aportes. Descárgala, crea tu cuenta gratis y súmate a la conversación.</p>
-        <a class="btn big" id="community-download" href="#">⬇️ Descargar y unirme</a>
+      <div class="section-head reveal">
+        <span class="eyebrow">El códice</span>
+        <h2>Guías para hacer plata</h2>
+        <p>Aprendé las estrategias en detalle, gratis y en español.</p>
+      </div>
+      <div class="codex reveal">
+        <a class="entry" href="guias/como-empezar.html">
+          <span class="lv">Principiante</span>
+          <span class="grow"><h3>Tu primer millón de plata</h3><p>Las formas más fáciles y seguras de arrancar sin morir en el intento.</p></span>
+          <span class="arrow">›</span>
+        </a>
+        <a class="entry" href="guias/transporte.html">
+          <span class="lv">Intermedio</span>
+          <span class="grow"><h3>Transporte entre ciudades</h3><p>El arbitraje clásico: comprar barato, vender caro, esquivar ganks.</p></span>
+          <span class="arrow">›</span>
+        </a>
+        <a class="entry" href="guias/refinado.html">
+          <span class="lv">Intermedio</span>
+          <span class="grow"><h3>Refinado con bono de ciudad</h3><p>Cómo el retorno de recursos te da hasta 54% de descuento.</p></span>
+          <span class="arrow">›</span>
+        </a>
+        <a class="entry" href="guias/mercado-negro.html">
+          <span class="lv">Avanzado</span>
+          <span class="grow"><h3>El Mercado Negro de Caerleon</h3><p>Comprar equipo y vendérselo caro al MN. Con sus riesgos.</p></span>
+          <span class="arrow">›</span>
+        </a>
       </div>
     </div>
   </section>
 
-  <section id="donar" class="center" style="display:none">
+  <!-- COMUNIDAD / DESCARGA -->
+  <section id="comunidad" class="cta-band">
+    <div class="glow"></div>
     <div class="wrap">
-      <h2>¿Te hizo plata? Invítanos un café ☕</h2>
-      <p class="section-sub" style="margin:8px auto 24px">Cada donación va directo a mejorar el
-        sistema: más estrategias, más datos, más velocidad. Gracias por apoyar.</p>
-      <a class="btn big" id="donate-btn" href="#" target="_blank" rel="noopener">❤️ Donar</a>
+      <div class="reveal">
+        <span class="eyebrow" style="justify-content:center">La hermandad</span>
+        <h2>Sumate a la comunidad</h2>
+        <p>La app trae un foro donde los traders comparten rutas, resuelven dudas y votan los mejores
+          aportes. Descargala, creá tu cuenta gratis y forjá tu fortuna con los demás.</p>
+        <a class="btn big" id="community-download" href="#">⬇ Descargar y unirme</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- DONAR -->
+  <section id="donar" class="band cta-band" style="display:none">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow" style="justify-content:center">Apoyo</span>
+        <h2>¿Te hizo plata? Invitanos un café</h2>
+        <p>Cada donación va directo a mejorar el sistema: más estrategias, más datos, más velocidad.</p>
+        <a class="btn big" id="donate-btn" href="#" target="_blank" rel="noopener">♥ Donar</a>
+      </div>
     </div>
   </section>
 
@@ -126,10 +223,12 @@
     <div class="wrap">
       <p class="disclaimer">Albion Silver Hub es un proyecto independiente de fans. No está afiliado
         ni respaldado por Sandbox Interactive GmbH ni por Albion Online. Los datos de mercado provienen
-        del Albion Online Data Project (crowdsourced). "Albion Online" es marca de sus respectivos dueños.</p>
-      <p>Hecho con ⚔️ para la comunidad · <a id="contact-link" href="#">Contacto</a></p>
+        del Albion Online Data Project. "Albion Online" es marca de sus respectivos dueños.</p>
+      <p class="sig" id="version-line">Versión — · Windows 10/11</p>
+      <p style="margin-top:8px"><a id="contact-link" href="#">Contacto</a></p>
     </div>
   </footer>
+  </div>
 
   <script src="config.js"></script>
   <script>
@@ -147,6 +246,11 @@
         document.getElementById('donar').style.display = '';
         document.getElementById('donate-btn').href = S.donateUrl;
       }
+      // Scroll reveal
+      var io = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+      }, { threshold: 0.12 });
+      document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
     })();
   </script>
 </body>
