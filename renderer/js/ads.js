@@ -10,17 +10,17 @@ import { escapeHtml } from './state.js';
 const HOUSE_ADS = [
   {
     id: 'house-sponsor-slot',
-    title: '📢 Tu anuncio aquí',
-    body: 'Patrocina Albion Silver Hub: tu gremio, coaching o tienda ante cientos de traders.',
+    title: 'Tu anuncio aquí',
+    body: 'Patrociná Albion Silver Hub: tu gremio, coaching o tienda ante cientos de traders.',
     url: 'mailto:jeroobregon03@gmail.com?subject=Patrocinio%20Albion%20Silver%20Hub',
-    color: '#e3b341',
+    color: '#d9a441',
   },
   {
-    id: 'house-premium',
-    title: '✨ Versión sin anuncios',
-    body: 'Apoya el desarrollo y quita los anuncios con la suscripción premium.',
-    url: '#premium',
-    color: '#bc8cff',
+    id: 'house-community',
+    title: 'Sumate a la comunidad',
+    body: 'Guías, novedades y foro en la web del sistema.',
+    url: 'https://albion-xp.vercel.app/',
+    color: '#86b0d6',
   },
 ];
 

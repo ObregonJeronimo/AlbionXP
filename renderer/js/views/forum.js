@@ -1,7 +1,7 @@
 // In-app community forum. Reading is public; posting/commenting/voting needs a
 // Firebase login (email + password). Login is inline — it never blocks the app.
 import {
-  listPosts, getPost, createPost, deletePost,
+  listPostsCached as listPosts, getPost, createPost, deletePost,
   listComments, addComment, getVotes, setVote, clearVote,
 } from '../forumdb.js';
 import {

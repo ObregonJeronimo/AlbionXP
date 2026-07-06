@@ -41,6 +41,20 @@ async function authHeaders() {
   return { Authorization: `Bearer ${token}` };
 }
 
+// ---- Read cache: cuts Firestore reads hard when many users browse ----
+// (each cached hit = 0 reads; without this, opening the forum re-reads every post).
+const _cache = new Map();
+async function cachedRead(key, ttlMs, fn) {
+  const hit = _cache.get(key);
+  if (hit && Date.now() - hit.t < ttlMs) return hit.v;
+  const v = await fn();
+  _cache.set(key, { t: Date.now(), v });
+  return v;
+}
+function invalidate(prefix) {
+  for (const k of _cache.keys()) if (k.startsWith(prefix)) _cache.delete(k);
+}
+
 function authorName() {
   return session.displayName || (session.email ? session.email.split('@')[0] : 'anónimo');
 }
@@ -58,11 +72,17 @@ export async function listPosts(limit = 50) {
   if (!res.ok) throw new Error(res.data?.error?.message || 'No se pudieron cargar los temas.');
   return (res.data || []).filter(r => r.document).map(r => unwrap(r.document));
 }
+const _rawListPosts = listPosts;
+export function listPostsCached(limit = 50) {
+  return cachedRead('posts:' + limit, 45000, () => _rawListPosts(limit));
+}
 
 export async function getPost(id) {
-  const res = await window.albion.request('GET', `${BASE()}/posts/${id}?key=${KEY()}`);
-  if (!res.ok) throw new Error('Tema no encontrado.');
-  return unwrap(res.data);
+  return cachedRead('post:' + id, 30000, async () => {
+    const res = await window.albion.request('GET', `${BASE()}/posts/${id}?key=${KEY()}`);
+    if (!res.ok) throw new Error('Tema no encontrado.');
+    return unwrap(res.data);
+  });
 }
 
 export async function createPost(title, body) {
@@ -70,6 +90,7 @@ export async function createPost(title, body) {
   const doc = fields({ authorUid: session.uid, authorName: authorName(), title, body, createdAt: new Date() });
   const res = await window.albion.request('POST', `${BASE()}/posts?key=${KEY()}`, doc, headers);
   if (!res.ok) throw new Error(res.data?.error?.message || 'No se pudo publicar.');
+  invalidate('posts:');
   return unwrap(res.data);
 }
 
@@ -81,10 +102,12 @@ export async function deletePost(id) {
 
 // ---------- Comments ----------
 export async function listComments(postId) {
-  const url = `${BASE()}/posts/${postId}/comments?orderBy=createdAt&pageSize=300&key=${KEY()}`;
-  const res = await window.albion.request('GET', url);
-  if (!res.ok) return [];
-  return (res.data.documents || []).map(unwrap);
+  return cachedRead('comments:' + postId, 20000, async () => {
+    const url = `${BASE()}/posts/${postId}/comments?orderBy=createdAt&pageSize=300&key=${KEY()}`;
+    const res = await window.albion.request('GET', url);
+    if (!res.ok) return [];
+    return (res.data.documents || []).map(unwrap);
+  });
 }
 
 export async function addComment(postId, body) {
@@ -92,23 +115,26 @@ export async function addComment(postId, body) {
   const doc = fields({ authorUid: session.uid, authorName: authorName(), body, createdAt: new Date() });
   const res = await window.albion.request('POST', `${BASE()}/posts/${postId}/comments?key=${KEY()}`, doc, headers);
   if (!res.ok) throw new Error(res.data?.error?.message || 'No se pudo comentar.');
+  invalidate('comments:' + postId);
   return unwrap(res.data);
 }
 
 // ---------- Votes (doc id = voter uid → no double voting, no counters to hack) ----------
 export async function getVotes(postId) {
-  const url = `${BASE()}/posts/${postId}/votes?pageSize=1000&key=${KEY()}`;
-  const res = await window.albion.request('GET', url);
-  const out = { up: 0, down: 0, score: 0, mine: 0 };
-  if (!res.ok) return out;
-  for (const d of (res.data.documents || [])) {
-    const o = unwrap(d);
-    const val = Number(o.value) || 0;
-    if (val > 0) out.up++; else if (val < 0) out.down++;
-    if (session.uid && o._id === session.uid) out.mine = val;
-  }
-  out.score = out.up - out.down;
-  return out;
+  return cachedRead('votes:' + postId, 15000, async () => {
+    const url = `${BASE()}/posts/${postId}/votes?pageSize=1000&key=${KEY()}`;
+    const res = await window.albion.request('GET', url);
+    const out = { up: 0, down: 0, score: 0, mine: 0 };
+    if (!res.ok) return out;
+    for (const d of (res.data.documents || [])) {
+      const o = unwrap(d);
+      const val = Number(o.value) || 0;
+      if (val > 0) out.up++; else if (val < 0) out.down++;
+      if (session.uid && o._id === session.uid) out.mine = val;
+    }
+    out.score = out.up - out.down;
+    return out;
+  });
 }
 
 export async function setVote(postId, value) { // value: 1 | -1
@@ -116,6 +142,7 @@ export async function setVote(postId, value) { // value: 1 | -1
   const url = `${BASE()}/posts/${postId}/votes/${session.uid}?key=${KEY()}`;
   const res = await window.albion.request('PATCH', url, fields({ value, uid: session.uid }), headers);
   if (!res.ok) throw new Error(res.data?.error?.message || 'No se pudo votar.');
+  invalidate('votes:' + postId);
 }
 
 export async function clearVote(postId) {
@@ -123,4 +150,5 @@ export async function clearVote(postId) {
   const url = `${BASE()}/posts/${postId}/votes/${session.uid}?key=${KEY()}`;
   const res = await window.albion.request('DELETE', url, null, headers);
   if (!res.ok) throw new Error('No se pudo quitar el voto.');
+  invalidate('votes:' + postId);
 }

@@ -12,6 +12,20 @@ El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md
   armería (medallones hexagonales) en vez de tarjetas, cinta de stats tipo HUD,
   índice de guías tipo códice y animaciones de aparición al hacer scroll.
 
+## [0.1.3] — 2026-07-06
+### Diseño
+- **Identidad forjada también en la app**: fuentes Cinzel + Alegreya Sans (locales,
+  offline), paleta hierro/oro/plata, botones biselados, títulos y secciones con Cinzel.
+- **Iconos minimalistas monocromáticos** (un solo color) en toda la app y la web,
+  reemplazando todos los emojis.
+- **Favicon** propio (arregla el 404 de la pestaña).
+### UX
+- **Tooltips de ayuda "?"** en todas las herramientas para que un principiante
+  entienda cada término (ROI, spread, flip, retorno, foco, encantamiento, etc.).
+### Rendimiento y seguridad
+- Caché de lecturas en el foro (menos consultas a Firestore → aguanta más tráfico).
+- Cabeceras de seguridad en la web (nosniff, X-Frame-Options, Referrer-Policy, HSTS).
+
 ## [0.1.2] — 2026-07-06
 ### Seguridad
 - **Verificación de email obligatoria** para publicar/comentar/votar en el foro
