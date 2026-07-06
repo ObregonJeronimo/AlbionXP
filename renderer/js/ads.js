@@ -28,6 +28,7 @@ let ads = [];
 let current = 0;
 let rotateTimer = null;
 let shownAt = 0;
+let cpmFrame = null;   // { enabled, url, height } — CPM ad served in a sandboxed iframe
 // pending stats: adId -> { seconds, clicks, views }
 const pending = new Map();
 let flushTimer = null;
@@ -113,16 +114,36 @@ function rotate() {
   renderAd();
 }
 
+// CPM ad in a SANDBOXED iframe. The ad network's script runs on a real web page
+// (ad-frame.html on the site), never inside the app — the sandbox + cross-origin
+// boundary keep it from touching anything. Enabled/configured from appconfig.json.
+function renderCpmFrame() {
+  const slot = document.getElementById('ad-cpm');
+  if (!slot) return;
+  const f = cpmFrame;
+  if (!f || !f.enabled || !f.url || adsDisabled()) { slot.style.display = 'none'; slot.innerHTML = ''; return; }
+  if (!/^https:\/\//i.test(f.url)) { slot.style.display = 'none'; return; }
+  const h = Math.max(50, Math.min(300, Number(f.height) || 90));
+  slot.style.display = 'flex';
+  slot.innerHTML = `<iframe src="${escapeHtml(f.url)}" title="ad"
+    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+    scrolling="no" referrerpolicy="no-referrer"
+    style="width:100%;max-width:970px;height:${h}px;border:0;display:block"></iframe>`;
+}
+
 export function refreshVisibility() {
   const off = adsDisabled();
   for (const el of document.querySelectorAll('.ad-slot')) {
     el.style.display = off ? 'none' : '';
   }
+  renderCpmFrame();
 }
 
-export async function initAds(remoteAds) {
+export async function initAds(remoteAds, adFrame) {
+  cpmFrame = adFrame || null;
   if (APP_CONFIG.monetization.mode !== 'free-ads') {
     for (const el of document.querySelectorAll('.ad-slot')) el.style.display = 'none';
+    renderCpmFrame();
     return;
   }
   // Ads from the remote config take priority; otherwise adsUrl/house ads.
@@ -130,6 +151,7 @@ export async function initAds(remoteAds) {
     ? remoteAds.filter(a => a.id && a.title && a.url)
     : await loadAds();
   if (!ads.length) ads = HOUSE_ADS;
+  renderCpmFrame();
   if (!ads.length) return;
   // Shuffle the starting ad so all campaigns get first-view time
   current = Math.floor(Math.random() * ads.length);

@@ -378,6 +378,7 @@ td.gold, .gold { color: var(--accent); }
 }
 
 /* ============ Ads ============ */
+.ad-cpm { display: none; justify-content: center; padding: 8px 28px 0; }
 .ad-slot { padding: 8px; }
 .ad-slot.ad-top { padding: 10px 28px 0; max-width: 1500px; }
 .ad-unit {

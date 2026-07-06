@@ -2,11 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // FORO: leer es público; escribir requiere estar autenticado.
-    // Cada quien solo edita/borra lo suyo. Un voto por usuario (id del doc = uid).
+    // Solo usuarios con EMAIL VERIFICADO pueden crear contenido.
+    // Esto frena la creación masiva de cuentas falsas: sin un email real
+    // verificado, no se puede publicar, comentar ni votar.
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
     match /posts/{postId} {
       allow read: if true;
-      allow create: if request.auth != null
+      allow create: if verified()
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 1
@@ -18,7 +23,7 @@ service cloud.firestore {
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if request.auth != null
+        allow create: if verified()
           && request.resource.data.authorUid == request.auth.uid
           && request.resource.data.body is string
           && request.resource.data.body.size() >= 1
@@ -29,7 +34,7 @@ service cloud.firestore {
 
       match /votes/{voterUid} {
         allow read: if true;
-        allow create, update: if request.auth != null
+        allow create, update: if verified()
           && request.auth.uid == voterUid
           && request.resource.data.value in [1, -1];
         allow delete: if request.auth != null && request.auth.uid == voterUid;

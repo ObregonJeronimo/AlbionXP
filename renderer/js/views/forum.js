@@ -4,8 +4,14 @@ import {
   listPosts, getPost, createPost, deletePost,
   listComments, addComment, getVotes, setVote, clearVote,
 } from '../forumdb.js';
-import { session, signIn, signUp, signOut, sendPasswordReset, setDisplayName } from '../auth.js';
+import {
+  session, signIn, signUp, signOut, sendPasswordReset, setDisplayName,
+  sendEmailVerification, refreshVerification,
+} from '../auth.js';
 import { escapeHtml } from '../state.js';
+
+// Only verified accounts can post/comment/vote (anti-spam).
+function canParticipate() { return Boolean(session.uid && session.emailVerified); }
 
 function when(iso) {
   if (!iso) return '';
@@ -30,16 +36,44 @@ export function renderForum(container) {
 function renderAuthBar(container) {
   const el = container.querySelector('#forum-auth');
   if (session.uid) {
+    const unverified = !session.emailVerified;
     el.innerHTML = `
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span>👤 Conectado como <b>${escapeHtml(session.displayName || session.email)}</b></span>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span>👤 Conectado como <b>${escapeHtml(session.displayName || session.email)}</b>
+          ${unverified ? '<span class="badge risk" style="margin-left:6px">email sin verificar</span>' : '<span class="badge safe" style="margin-left:6px">✓ verificado</span>'}</span>
         <button class="btn secondary" id="forum-logout">Cerrar sesión</button>
-      </div>`;
+      </div>
+      ${unverified ? `
+      <div class="error-box" style="margin-bottom:16px">
+        <b>Verifica tu email para participar.</b> Te enviamos un enlace a <b>${escapeHtml(session.email)}</b>
+        (revisa spam). Podés leer el foro, pero para publicar, comentar o votar necesitás confirmar tu email.
+        <div style="margin-top:8px">
+          <button class="btn" id="fv-check">Ya verifiqué</button>
+          <button class="btn secondary" id="fv-resend">Reenviar email</button>
+          <span id="fv-msg" class="hint"></span>
+        </div>
+      </div>` : ''}`;
     el.querySelector('#forum-logout').addEventListener('click', async () => {
       await signOut();
       renderAuthBar(container);
       showList(container);
     });
+    if (unverified) {
+      const msg = el.querySelector('#fv-msg');
+      el.querySelector('#fv-check').addEventListener('click', async (e) => {
+        e.target.disabled = true;
+        msg.textContent = 'Comprobando…';
+        const ok = await refreshVerification().catch(() => false);
+        if (ok) { renderAuthBar(container); showList(container); }
+        else { msg.innerHTML = '<span class="neg">Todavía no aparece verificado. Abrí el enlace del email y reintentá.</span>'; e.target.disabled = false; }
+      });
+      el.querySelector('#fv-resend').addEventListener('click', async (e) => {
+        e.target.disabled = true;
+        try { await sendEmailVerification(); msg.innerHTML = '<span class="pos">Email reenviado.</span>'; }
+        catch (err) { msg.innerHTML = `<span class="neg">${escapeHtml(String(err.message))}</span>`; }
+        setTimeout(() => { e.target.disabled = false; }, 3000);
+      });
+    }
   } else {
     el.innerHTML = `
       <div class="card">
@@ -104,7 +138,7 @@ function renderAuthForms(container, mode) {
 async function showList(container) {
   const body = container.querySelector('#forum-body');
   body.innerHTML = `
-    ${session.uid ? `
+    ${canParticipate() ? `
       <div class="card">
         <h3>Nuevo tema</h3>
         <div class="ctrl" style="margin-bottom:8px"><input type="text" id="np-title" placeholder="Título (ej: Mejor ruta de refinado hoy)" maxlength="140" style="width:100%" /></div>
@@ -114,7 +148,7 @@ async function showList(container) {
     <div id="forum-list"><div class="loading"><span class="spinner"></span>Cargando temas…</div></div>
   `;
 
-  if (session.uid) {
+  if (canParticipate()) {
     body.querySelector('#np-go').addEventListener('click', async () => {
       const title = body.querySelector('#np-title').value.trim();
       const text = body.querySelector('#np-body').value.trim();
@@ -191,11 +225,11 @@ async function showDetail(container, id) {
               <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.5">${escapeHtml(c.body || '')}</div>
             </div>`).join('') || '<p class="hint">Sé el primero en comentar.</p>'}
         </div>
-        ${session.uid ? `
+        ${canParticipate() ? `
           <div style="margin-top:12px">
             <textarea id="fd-cbody" placeholder="Escribe un comentario…" rows="3" style="width:100%;background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;resize:vertical"></textarea>
             <div style="margin-top:6px"><button class="btn" id="fd-csend">Comentar</button> <span id="fd-cmsg" class="hint"></span></div>
-          </div>` : '<p class="hint">Inicia sesión (arriba) para comentar o votar.</p>'}
+          </div>` : `<p class="hint">${session.uid ? 'Verifica tu email (arriba) para comentar o votar.' : 'Inicia sesión (arriba) para comentar o votar.'}</p>`}
       </div>
     `;
 

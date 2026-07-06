@@ -126,7 +126,7 @@ freshSel.addEventListener('change', async () => {
   navigate('dashboard');
   renderCommunityLinks();
   initUpdater();
-  initAds(remote && remote.ads);
+  initAds(remote && remote.ads, remote && remote.adFrame);
   refreshVisibility();
 
   const status = document.getElementById('data-status');

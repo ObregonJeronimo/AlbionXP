@@ -15,8 +15,29 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
+// IPC hardening: the renderer can only reach these hosts through the network
+// bridge. Even if a bug injected script into the renderer, it couldn't call
+// arbitrary servers (SSRF / exfiltration guard).
+const ALLOWED_HOSTS = [
+  /(^|\.)albion-online-data\.com$/,   // market data (AODP)
+  /(^|\.)googleapis\.com$/,           // Firebase (Firestore, auth, token)
+  /^raw\.githubusercontent\.com$/,    // item metadata + recipes
+  /^cdn\.jsdelivr\.net$/,             // item metadata mirror
+  /^render\.albiononline\.com$/,      // item icons
+  /(^|\.)github\.io$/,                // appconfig.json / ads
+  /^api\.groq\.com$/,                 // optional AI
+  /^openrouter\.ai$/,                 // optional AI
+  /^ollama\.com$/,                    // Ollama installer
+  /^(127\.0\.0\.1|localhost)$/,       // local Ollama server
+];
+function hostAllowed(urlStr) {
+  try { return ALLOWED_HOSTS.some((re) => re.test(new URL(urlStr).hostname)); }
+  catch (_) { return false; }
+}
+
 // ---------- Generic JSON fetch in the main process (no CORS) ----------
 async function fetchJson(url, timeoutMs = 25000, headers = {}) {
+  if (!hostAllowed(url)) return { ok: false, status: 0, error: 'host no permitido' };
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -79,6 +100,7 @@ function setSettings(patch) {
 
 // ---------- POST JSON (for AI providers: Ollama local, Groq, OpenRouter) ----------
 async function postJson(url, body, headers = {}, timeoutMs = 120000) {
+  if (!hostAllowed(url)) return { ok: false, status: 0, error: 'host no permitido' };
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -253,6 +275,7 @@ async function ollamaPull(event, model) {
 
 // ---------- Generic REST (GET/POST/PATCH/DELETE) for Firestore ----------
 async function apiRequest(method, url, body, headers = {}, timeoutMs = 25000) {
+  if (!hostAllowed(url)) return { ok: false, status: 0, error: 'host no permitido' };
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -326,12 +349,28 @@ function createWindow() {
     title: 'Albion Silver Hub',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
+      contextIsolation: true,   // renderer can't touch Node/Electron internals
+      nodeIntegration: false,   // no Node in the renderer
+      sandbox: true,            // Chromium OS-level sandbox for the renderer
+      webSecurity: true,        // enforce same-origin + CSP
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   initAutoUpdate(win);
+
+  // ---- Navigation hardening ----
+  // Any window.open / target=_blank goes to the system browser, never a new
+  // in-app window; deny everything else.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  // Block the app frame from ever navigating away from our local file.
+  win.webContents.on('will-navigate', (e, url) => {
+    if (!url.startsWith('file://')) { e.preventDefault(); if (/^https?:\/\//i.test(url)) shell.openExternal(url); }
+  });
+  // Deny attaching webviews (we don't use any).
+  win.webContents.on('will-attach-webview', (e) => e.preventDefault());
 
   if (process.env.ALBION_DEBUG) {
     win.webContents.on('console-message', (_e, level, message, line, sourceId) => {

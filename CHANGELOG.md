@@ -9,6 +9,20 @@ El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md
 ## [No publicado]
 - (acá se anotan los cambios en curso antes de sacar una versión)
 
+## [0.1.2] — 2026-07-06
+### Seguridad
+- **Verificación de email obligatoria** para publicar/comentar/votar en el foro
+  (regla `email_verified` en Firestore + envío/reenvío de email + bloqueo hasta
+  verificar). Frena la creación masiva de cuentas falsas.
+- **Endurecimiento de Electron**: sandbox del renderer, bloqueo de ventanas
+  emergentes y navegación externa, y lista blanca de hosts en la capa de red.
+### Añadido
+- Soporte de **anuncios CPM** en un iframe aislado (sandbox) que carga la
+  publicidad desde una página real (`ad-frame.html`); activable desde
+  `appconfig.json` sin recompilar.
+- **Sección de guías** en la web (SEO/tráfico): cómo empezar, transporte,
+  refinado y mercado negro.
+
 ## [0.1.1] — 2026-07-06
 ### Añadido
 - **Configuración remota** (`appconfig.json` en la web): los anuncios, el botón

@@ -10,6 +10,7 @@ export const session = {
   uid: null,
   email: null,
   displayName: null,   // nick shown in the forum
+  emailVerified: false,// must be true to post/comment/vote (anti-spam)
   idToken: null,
   refreshToken: null,
   expiresAt: 0,        // ms epoch for idToken
@@ -69,15 +70,47 @@ export async function setDisplayName(name) {
   await persist();
 }
 
+// Pulls fresh account info (email_verified, displayName) via accounts:lookup.
+async function refreshUserInfo() {
+  const token = session.idToken;
+  if (!token) return;
+  try {
+    const d = await idtk('lookup', { idToken: token });
+    const u = d.users && d.users[0];
+    if (u) {
+      session.emailVerified = !!u.emailVerified;
+      if (u.displayName) session.displayName = u.displayName;
+    }
+  } catch (_) { /* keep what we have */ }
+}
+
+export async function sendEmailVerification() {
+  const token = await freshIdToken();
+  if (!token) throw new Error('inicia sesión primero');
+  await idtk('sendOobCode', { requestType: 'VERIFY_EMAIL', idToken: token });
+}
+
+// After the user clicks the email link, force a token refresh so the
+// email_verified claim updates, then re-check. Returns the new verified state.
+export async function refreshVerification() {
+  await restoreSession();     // re-exchanges the refresh token -> fresh id token
+  await refreshUserInfo();
+  return session.emailVerified;
+}
+
 export async function signUp(email, password) {
   const d = await idtk('signUp', { email, password, returnSecureToken: true });
   applyAuth(d);
+  session.emailVerified = false;
   await persist();
+  // Send the verification email immediately (best-effort)
+  try { await sendEmailVerification(); } catch (_) { /* user can resend */ }
 }
 
 export async function signIn(email, password) {
   const d = await idtk('signInWithPassword', { email, password, returnSecureToken: true });
   applyAuth(d);
+  await refreshUserInfo();
   await persist();
 }
 
@@ -111,6 +144,7 @@ export async function restoreSession() {
     session.idToken = d.id_token;
     session.refreshToken = d.refresh_token;
     session.expiresAt = Date.now() + (Number(d.expires_in || 3600) - 120) * 1000;
+    await refreshUserInfo();  // pick up email_verified + latest nick
     await persist();
     return true;
   } catch (_) { return false; }

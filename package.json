@@ -1,6 +1,6 @@
 {
   "name": "albion-silver-hub",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Albion Online market intelligence desktop app",
   "main": "main.js",
   "scripts": {

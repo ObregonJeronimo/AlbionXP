@@ -103,6 +103,26 @@ nav .wrap { display: flex; align-items: center; justify-content: space-between; 
 footer { padding: 40px 0; text-align: center; color: var(--faint); font-size: 13px; }
 footer .disclaimer { max-width: 680px; margin: 0 auto 12px; }
 
+/* Guías / artículos */
+.article { max-width: 760px; margin: 0 auto; padding: 40px 24px 72px; }
+.article .crumb { font-size: 13px; color: var(--dim); margin-bottom: 20px; }
+.article h1 { font-size: 34px; line-height: 1.15; margin-bottom: 10px; }
+.article .lead { font-size: 17px; color: var(--dim); margin-bottom: 28px; }
+.article h2 { font-size: 22px; margin: 32px 0 10px; }
+.article h3 { font-size: 17px; margin: 22px 0 6px; color: var(--gold); }
+.article p { margin-bottom: 14px; color: #c9d1d9; }
+.article ul, .article ol { margin: 0 0 16px 22px; color: #c9d1d9; }
+.article li { margin-bottom: 6px; }
+.article .tip { background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.3); border-radius: 10px; padding: 14px 18px; margin: 18px 0; font-size: 14px; }
+.article .warn { background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.3); border-radius: 10px; padding: 14px 18px; margin: 18px 0; font-size: 14px; }
+.article .cta { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; margin: 36px 0 0; }
+.guide-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 16px; }
+.guide-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: block; }
+.guide-card:hover { border-color: var(--gold); }
+.guide-card .lvl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gold); }
+.guide-card h3 { font-size: 16px; margin: 6px 0; color: var(--text); }
+.guide-card p { color: var(--dim); font-size: 13.5px; }
+
 @media (max-width: 720px) {
   .hero h1 { font-size: 38px; }
   .help-cols { grid-template-columns: 1fr; }
