@@ -15,3 +15,6 @@ Thumbs.db
 *firebase-adminsdk*.json
 .env
 .env.*
+
+# Claude Code local
+.claude/
