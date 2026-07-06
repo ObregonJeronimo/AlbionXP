@@ -4,9 +4,9 @@
     "donateUrl": "https://cafecito.app/albionxp"
   },
   "adFrame": {
-    "enabled": false,
-    "url": "https://obregonjeronimo.github.io/AlbionXP/ad-frame.html",
-    "height": 90
+    "enabled": true,
+    "url": "https://albion-xp.vercel.app/ad-frame.html",
+    "height": 110
   },
   "ads": [
     {

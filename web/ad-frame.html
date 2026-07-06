@@ -4,34 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ad</title>
+  <!-- Monetag In-Page Push (zona 11246499) -->
+  <script>(function(s){s.dataset.zone='11246499',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
   <style>
     html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-    #ad { display: flex; align-items: center; justify-content: center; min-height: 90px; }
-    /* Placeholder mientras no haya red configurada */
-    #ph { font-family: system-ui, sans-serif; font-size: 12px; color: #6e7681; }
+    #ph { display: flex; align-items: center; justify-content: center; min-height: 90px;
+          font-family: system-ui, sans-serif; font-size: 12px; color: #6e7681; }
   </style>
 </head>
 <body>
-  <!--
-    ======================= CÓMO ACTIVAR LOS ANUNCIOS CPM =======================
-    Esta página es un contenedor AISLADO: la app la muestra dentro de un iframe
-    en sandbox, así el script de la red publicitaria nunca toca la aplicación.
-
-    Pasos:
-    1) Date de alta en una red CPM que acepte sitios nuevos (recomendado: Monetag
-       o Adsterra — ver docs/DISTRIBUCION.md).
-    2) Crea una "zona"/"banner" (tamaño recomendado 728x90 o 970x90).
-    3) Pega AQUÍ ABAJO el snippet <script> que te da la red (reemplaza el bloque
-       del placeholder de abajo).
-    4) En web/appconfig.json pon  "adFrame": { "enabled": true, ... }  y publica
-       la rama gh-pages. Los anuncios aparecen en la app de todos, sin recompilar.
-    =============================================================================
-  -->
-  <div id="ad">
-    <span id="ph">espacio publicitario</span>
-  </div>
-
-  <!-- PEGA AQUÍ EL SCRIPT DE TU RED CPM (Monetag / Adsterra / etc.) -->
-
+  <!-- Contenedor aislado: la app muestra esta página en un iframe en sandbox,
+       así el script de Monetag nunca toca la aplicación. -->
+  <div id="ph">publicidad</div>
 </body>
 </html>
