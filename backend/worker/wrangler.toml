@@ -10,10 +10,13 @@ compatibility_date = "2026-01-01"
 #   SA_PRIVATE_KEY   (secret) — private_key del service account de Firebase
 [vars]
 FIREBASE_API_KEY = "PEGAR_WEB_API_KEY"
-FIREBASE_PROJECT_ID = "PEGAR_PROJECT_ID"
+FIREBASE_PROJECT_ID = "albionxp-eef13"
 SA_CLIENT_EMAIL = "PEGAR_CLIENT_EMAIL"
+GH_REPO = "ObregonJeronimo/AlbionXP"
 PLAN_AMOUNT = "5000"
 PLAN_TITLE = "Albion Silver Hub — premium sin anuncios"
+# ADMIN_KEY va como SECRET (npx wrangler secret put ADMIN_KEY) — es la clave del panel /admin.
+# Solo el panel de admin y la analítica (/beat /hit /admin) requieren: SA_PRIVATE_KEY (secret) + SA_CLIENT_EMAIL + FIREBASE_PROJECT_ID + ADMIN_KEY.
 # Campañas de anuncios (JSON en una línea). Edítalo en el panel de Cloudflare
 # (Settings > Variables) y los usuarios lo reciben al instante, sin recompilar.
 ADS_JSON = '[{"id":"sponsor-slot","title":"📢 Tu anuncio aquí","body":"Patrocina Albion Silver Hub","url":"mailto:jeroobregon03@gmail.com?subject=Patrocinio","color":"#e3b341"}]'
