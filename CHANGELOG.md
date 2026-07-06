@@ -7,7 +7,10 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
 ## [No publicado]
-- (acá se anotan los cambios en curso antes de sacar una versión)
+- **Rediseño de la web** con identidad visual propia "tesorería forjada" de Albion:
+  tipografía Cinzel (grabada) + Alegreya Sans, paleta hierro/oro/plata, layout de
+  armería (medallones hexagonales) en vez de tarjetas, cinta de stats tipo HUD,
+  índice de guías tipo códice y animaciones de aparición al hacer scroll.
 
 ## [0.1.2] — 2026-07-06
 ### Seguridad
