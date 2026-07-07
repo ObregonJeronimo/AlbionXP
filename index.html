@@ -12,7 +12,7 @@
   <div id="page">
   <nav>
     <div class="wrap">
-      <div class="brand"><span class="sigil">⚔️</span> <b>Albion <span>Silver Hub</span></b></div>
+      <a class="brand" id="brand-home" href="#" style="cursor:pointer;text-decoration:none;color:inherit" aria-label="Ir al inicio"><span class="sigil">⚔️</span> <b>Albion <span>Silver Hub</span></b></a>
       <div class="nav-links">
         <a href="#arsenal">El arsenal</a>
         <a href="guias/index.html">Guías</a>
@@ -257,6 +257,12 @@
         es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
       }, { threshold: 0.12 });
       document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+      // El logo lleva al tope de la página (scroll suave).
+      var brand = document.getElementById('brand-home');
+      if (brand) brand.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     })();
   </script>
 </body>
