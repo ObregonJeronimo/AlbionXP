@@ -6,6 +6,13 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
+## [0.1.9] — 2026-07-07
+### Robustez
+- **Instancia única**: la app ya no se puede abrir dos veces a la vez. Si intentás
+  abrir otra copia, se enfoca la que ya está abierta (evita datos y procesos duplicados).
+- **Cierre limpio**: al cerrar la ventana el proceso termina del todo — nada queda
+  colgado en segundo plano que pueda impedir volver a abrir la app después.
+
 ## [0.1.8] — 2026-07-07
 ### Pulido de métodos (más claro para actuar)
 - **Refinado**: fila "Recomendado hoy" que elige por vos el mejor producto y te dice

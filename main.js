@@ -8,6 +8,8 @@ const { spawn, execFile } = require('child_process');
 let autoUpdater = null;
 try { ({ autoUpdater } = require('electron-updater')); } catch (_) { /* dev without dep */ }
 
+let mainWindow = null; // single reference so a 2nd launch can focus it
+
 const USER_DATA = () => app.getPath('userData');
 const CACHE_DIR = () => path.join(USER_DATA(), 'cache');
 
@@ -377,6 +379,8 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow = win;
+  win.on('closed', () => { if (mainWindow === win) mainWindow = null; });
   initAutoUpdate(win);
 
   // ---- Navigation hardening ----
@@ -400,13 +404,33 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+// Single-instance lock: only ONE copy of the app can run at a time. A second launch
+// (double-click again, or auto-start) does NOT open a duplicate — it just focuses the
+// window that's already open. The lock is held by the running process and released the
+// instant it exits, so a normal close always frees it for the next launch.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  // Another instance already owns the lock: quit immediately (it will get focused).
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  app.whenReady().then(() => {
+    createWindow();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  // No tray, no background mode: closing the window fully quits the process so nothing
+  // lingers to block the next launch. (Ollama runs as its own detached service, unaffected.)
+  app.on('window-all-closed', () => {
+    app.quit();
+  });
+}
