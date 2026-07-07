@@ -6,6 +6,17 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
+## [0.1.4] — 2026-07-06
+### Arreglos (QA)
+- Planner sin emojis (iconos propios en estado de IA, tarjetas de plan y botones).
+- Limpiador de emojis corre antes del repintado (requestAnimationFrame): sin parpadeo
+  en contenido que se carga de forma asíncrona.
+- Arreglado un error del gráfico de Oro al salir de la vista antes de que cargue.
+### Añadido
+- "Latido" anónimo para el panel de admin (métrica de usuarios online), activable
+  desde `appconfig.json` (`analyticsUrl`) sin recompilar.
+- El panel de admin (web) usa **login de Google** restringido a los dueños.
+
 ## [No publicado]
 - **Rediseño de la web** con identidad visual propia "tesorería forjada" de Albion:
   tipografía Cinzel (grabada) + Alegreya Sans, paleta hierro/oro/plata, layout de

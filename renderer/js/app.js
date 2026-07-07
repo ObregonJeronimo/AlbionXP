@@ -95,6 +95,7 @@ export function navigate(view, params = {}) {
   VIEWS[view](container, params);
   decorateTitle(view);
   applyTooltips(view);
+  stripEmojis(container); // sincrónico: sin parpadeo de emojis antes del repintado
 }
 
 // No emojis anywhere: strip pictographic emoji from text nodes at runtime,
@@ -109,12 +110,17 @@ function stripEmojis(root) {
   for (const t of hits) { EMOJI_RE.lastIndex = 0; t.nodeValue = t.nodeValue.replace(EMOJI_RE, '').replace(/[ \t]{2,}/g, ' '); }
 }
 
-// One observer: re-apply tooltips as tables render, and keep the UI emoji-free.
+// One observer: strip emojis BEFORE the next paint (rAF → no visible flash even
+// on async content) and re-apply tooltips as result tables render.
 const APP_ROOT = document.getElementById('app');
-let _obsTimer = null;
+let _rafPending = false, _tipTimer = null;
 new MutationObserver(() => {
-  clearTimeout(_obsTimer);
-  _obsTimer = setTimeout(() => { applyTooltips(currentView); stripEmojis(APP_ROOT); }, 110);
+  if (!_rafPending) {
+    _rafPending = true;
+    requestAnimationFrame(() => { _rafPending = false; stripEmojis(APP_ROOT); });
+  }
+  clearTimeout(_tipTimer);
+  _tipTimer = setTimeout(() => applyTooltips(currentView), 110);
 }).observe(APP_ROOT, { childList: true, subtree: true });
 
 // Replace any leading emoji in the view title with our monochrome icon.

@@ -4,6 +4,7 @@
 import { buildPlans, templateNarration } from '../planner.js';
 import { askAI, healOllama, DEFAULT_MODEL, AI_SYSTEM_PROMPT } from '../ai.js';
 import { state, saveSettings, fmt, escapeHtml } from '../state.js';
+import { icon } from '../icons.js';
 
 const TARGETS = [
   { label: '1 millón', value: 1e6 },
@@ -53,7 +54,7 @@ export function renderPlanner(container) {
     </div>
 
     <div class="card">
-      <h3>🤖 Coach IA — estado</h3>
+      <h3>${icon('spark', 18)} Coach IA — estado</h3>
       <div id="pln-ai-status" class="hint">Diagnosticando IA local…</div>
       <div id="pln-ai-actions" style="margin-top:10px"></div>
       <div id="pln-ai-progress" style="display:none;margin-top:10px">
@@ -115,31 +116,31 @@ async function refreshAIStatus(container) {
 
   const heal = await healOllama((msg) => { status.textContent = msg; });
   const extra = [];
-  if (state.groqKey) extra.push('Groq ✓');
-  if (state.openrouterKey) extra.push('OpenRouter ✓');
+  if (state.groqKey) extra.push('Groq conectado');
+  if (state.openrouterKey) extra.push('OpenRouter conectado');
   const extraTxt = extra.length ? ` · Nube: ${extra.join(', ')}` : '';
 
   if (heal.ok) {
-    status.innerHTML = `<span class="pos">✓ Coach IA listo</span> — Ollama local con ${heal.models.length} modelo(s): ${escapeHtml(heal.models.slice(0, 3).join(', '))}${extraTxt}`;
+    status.innerHTML = `<span class="pos">${icon('check', 14)} Coach IA listo</span> — Ollama local con ${heal.models.length} modelo(s): ${escapeHtml(heal.models.slice(0, 3).join(', '))}${extraTxt}`;
     return;
   }
 
   if (heal.stage === 'no-model') {
-    status.innerHTML = `<span class="neg">⚠ ${escapeHtml(heal.detail)}</span>${extraTxt}`;
-    actions.innerHTML = `<button class="btn" id="pln-fix-pull">⬇️ Descargar modelo ${DEFAULT_MODEL} (~2 GB, una sola vez)</button>`;
+    status.innerHTML = `<span class="neg">${icon('warn', 14)} ${escapeHtml(heal.detail)}</span>${extraTxt}`;
+    actions.innerHTML = `<button class="btn" id="pln-fix-pull">${icon('download', 15)} Descargar modelo ${DEFAULT_MODEL} (~2 GB, una sola vez)</button>`;
     actions.querySelector('#pln-fix-pull').addEventListener('click', () => pullModel(container));
   } else if (heal.stage === 'not-installed') {
-    status.innerHTML = `<span class="neg">✗ ${escapeHtml(heal.detail)}</span>${extraTxt}`;
+    status.innerHTML = `<span class="neg">${icon('warn', 14)} ${escapeHtml(heal.detail)}</span>${extraTxt}`;
     actions.innerHTML = `
-      <button class="btn" id="pln-fix-install">🚀 Instalar Ollama automáticamente (descarga + instalación silenciosa + modelo)</button>
+      <button class="btn" id="pln-fix-install">${icon('install', 15)} Instalar Ollama automáticamente (descarga + instalación silenciosa + modelo)</button>
       <p class="hint" style="margin-top:6px">Requisitos: ~4 GB de disco y 8 GB de RAM recomendados. Todo local y gratuito.</p>`;
     actions.querySelector('#pln-fix-install').addEventListener('click', () => installOllama(container));
   } else { // start-failed
-    status.innerHTML = `<span class="neg">✗ ${escapeHtml(heal.detail)}</span>${extraTxt}`;
+    status.innerHTML = `<span class="neg">${icon('warn', 14)} ${escapeHtml(heal.detail)}</span>${extraTxt}`;
     actions.innerHTML = `
       <div class="error-box">Pasos manuales: 1) Menú Inicio → escribe "Ollama" → ábrelo. 2) Si no aparece, reinstálalo con el botón de abajo. 3) Si sigue fallando, reinicia el PC (otro proceso puede estar ocupando el puerto 11434).</div>
-      <button class="btn secondary" id="pln-fix-retry">🔄 Reintentar diagnóstico</button>
-      <button class="btn" id="pln-fix-reinstall">🚀 Reinstalar Ollama</button>`;
+      <button class="btn secondary" id="pln-fix-retry">${icon('refresh', 15)} Reintentar diagnóstico</button>
+      <button class="btn" id="pln-fix-reinstall">${icon('install', 15)} Reinstalar Ollama</button>`;
     actions.querySelector('#pln-fix-retry').addEventListener('click', () => refreshAIStatus(container));
     actions.querySelector('#pln-fix-reinstall').addEventListener('click', () => installOllama(container));
   }
@@ -172,13 +173,13 @@ async function installOllama(container) {
     status.textContent = 'Instalando Ollama…';
     const res = await window.albion.ollamaInstall();
     if (!res.ok) throw new Error(res.error || 'instalación fallida');
-    status.textContent = 'Ollama instalado ✓ — descargando el modelo…';
+    status.textContent = 'Ollama instalado — descargando el modelo…';
     const pull = await window.albion.ollamaPull(DEFAULT_MODEL);
     if (!pull.ok) throw new Error(pull.error || 'descarga del modelo fallida');
   } catch (e) {
     container.querySelector('#pln-ai-progress-txt').textContent = '';
     status.innerHTML = `<span class="neg">Error: ${escapeHtml(String(e.message))}</span> — puedes instalarlo a mano desde <b>ollama.com</b> y pulsar Reintentar.`;
-    actions.innerHTML = `<button class="btn secondary" id="pln-fix-retry2">🔄 Reintentar diagnóstico</button>`;
+    actions.innerHTML = `<button class="btn secondary" id="pln-fix-retry2">${icon('refresh', 15)} Reintentar diagnóstico</button>`;
     actions.querySelector('#pln-fix-retry2').addEventListener('click', () => refreshAIStatus(container));
     unsub(); showProgress(container, false);
     return;
@@ -199,7 +200,7 @@ async function pullModel(container) {
     if (!pull.ok) throw new Error(pull.error || 'descarga fallida');
   } catch (e) {
     status.innerHTML = `<span class="neg">Error descargando el modelo: ${escapeHtml(String(e.message))}</span> — comprueba tu conexión y reintenta.`;
-    actions.innerHTML = `<button class="btn secondary" id="pln-fix-retry3">🔄 Reintentar</button>`;
+    actions.innerHTML = `<button class="btn secondary" id="pln-fix-retry3">${icon('refresh', 15)} Reintentar</button>`;
     actions.querySelector('#pln-fix-retry3').addEventListener('click', () => refreshAIStatus(container));
     unsub(); showProgress(container, false);
     return;
@@ -241,19 +242,19 @@ async function run(container, getTarget) {
       ${plans.map((p, i) => `
         <div class="strategy">
           <div class="strategy-head">
-            <h3>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '▫️'} ${escapeHtml(p.title)}</h3>
+            <h3><span class="rank">${i + 1}º</span> ${escapeHtml(p.title)}</h3>
             <span class="badge ${p.detail?.risky || p.kind === 'blackmarket' ? 'risk' : 'safe'}">${p.detail?.risky || p.kind === 'blackmarket' ? 'Riesgo: zona roja' : 'Riesgo bajo'}</span>
             <span class="badge diff-2">${fmt(p.silverPerActiveHour)}/h activa</span>
           </div>
-          <p><b>⏱️ ${p.days < 1 ? Math.ceil(p.days * 24) + ' horas' : p.days.toFixed(1) + ' días'}</b>
+          <p><b>${icon('clock', 14)} ${p.days < 1 ? Math.ceil(p.days * 24) + ' horas' : p.days.toFixed(1) + ' días'}</b>
              (${Math.ceil(p.activeHours)} h activas en ${p.cycles} ciclos) ·
-             <b>💰 Inversión: ${fmt(p.effCapital)}</b> ·
-             ~${fmt(p.effProfit)}/ciclo${p.capitalShort ? ' · <span class="neg">⚠️ capital corto: con más irías más rápido</span>' : ''}</p>
+             <b>${icon('coin', 14)} Inversión: ${fmt(p.effCapital)}</b> ·
+             ~${fmt(p.effProfit)}/ciclo${p.capitalShort ? ' · <span class="neg">capital corto: con más irías más rápido</span>' : ''}</p>
           <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.7">${mdToHtml(templateNarration(p, target))}</div>
         </div>`).join('')}
 
       <div class="card" id="pln-ai-card">
-        <h3>🤖 Análisis del coach IA</h3>
+        <h3>${icon('spark', 18)} Análisis del coach IA</h3>
         <div id="pln-ai-out" class="loading"><span class="spinner"></span>Preparando narración…</div>
       </div>
       <p class="hint">Los tiempos son estimaciones conservadoras con datos de este momento: los precios se mueven — regenera el plan cada sesión.

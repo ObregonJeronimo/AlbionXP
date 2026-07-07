@@ -67,6 +67,8 @@ async function load(container) {
 
     const ctx = container.querySelector('#gold-chart');
     if (chart) { chart.destroy(); chart = null; }
+    // El usuario pudo navegar a otra vista mientras cargaban los datos (canvas ya no existe).
+    if (!ctx || !ctx.isConnected) return;
     chart = new Chart(ctx, {
       type: 'line',
       data: {
