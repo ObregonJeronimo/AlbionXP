@@ -6,6 +6,20 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
+## [0.1.7] — 2026-07-07
+### Onboarding y claridad para principiantes
+- **"Empezá acá" en el Dashboard**: la primera pantalla ahora invita a generar tu
+  primer plan (incluso sin capital), en vez de dejarte solo ante las herramientas.
+- **Tarjeta "Empieza aquí" en el Plan**: según tu capital y si tenés premium, te dice
+  en una frase tu primer paso concreto.
+- **Pasos a prueba de tontos**: cada plan ahora muestra qué **necesitás** (montura,
+  foco…), el **riesgo** ("cuánto podés perder"), el **neto por unidad tras impuesto**,
+  un consejo de **orden de compra** (ahorra 2-4%), la **liquidez** del mercado y qué
+  hacer **si no se vende**.
+- **Primera meta 500 mil** (además de 1M/5M/20M): una victoria temprana alcanzable.
+- **Sin resultados ya no es un callejón sin salida**: si no hay datos frescos, el Plan
+  reintenta con una ventana de 24 h y te avisa, en vez de dejarte sin plan.
+
 ## [0.1.6] — 2026-07-07
 ### El Plan de plata — más métodos y a prueba de principiantes
 - **Modo Principiante vs Óptimo**: en Principiante, el Plan ordena por lo más **fácil

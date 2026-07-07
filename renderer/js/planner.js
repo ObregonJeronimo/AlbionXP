@@ -478,6 +478,30 @@ export function templateNarration(plan, targetSilver) {
     L.push(`2. Llevá lo crafteado a **Caerleon** ⚠️ (zona roja: montura rápida, sin sobrecarga) y vendé al Mercado Negro.`);
     L.push(`3. Beneficio ~${plan.effProfit.toLocaleString('es')} por tanda. El crafteo sale calidad Normal ~69% de las veces; las calidades altas rinden algo más.`);
   }
+
+  // Beginner-proof footer: what you need, how much you can lose, and a liquidity/tip line.
+  L.push('');
+  const risky = plan.detail?.risky || plan.kind === 'blackmarket';
+  const needs = {
+    transport: 'una montura de carga (buey o caballo de carga) para el lote.',
+    blackmarket: 'montura de carga y una montura rápida para escapar en Caerleon.',
+    craft: 'nivel de crafteo en esa línea y montura de carga; craftea donde tengas especialización de ciudad.',
+    refine: 'nada especial. Si tenés foco, el retorno de recursos sube bastante y el margen mejora.',
+    cityflip: 'algo de capital y paciencia (las órdenes tardan en llenarse). No hace falta montura ni viajar.',
+  }[plan.kind];
+  if (needs) L.push(`**Necesitás:** ${needs}`);
+  L.push(`**Riesgo:** ${risky
+    ? 'zona roja — podés morir y perder TODA la carga. No lleves más del ~10% de tu banco por viaje.'
+    : 'bajo — como mucho perdés algo si el precio se mueve; no arriesgás al personaje.'}`);
+  if (['transport', 'blackmarket', 'craft', 'refine'].includes(plan.kind)) {
+    L.push('**Consejo:** comprá con **orden de compra** (no a precio instantáneo) si no tenés prisa: ahorrás ~2-4%.');
+  }
+  if (plan.detail?.volPerDay) {
+    L.push(`**Liquidez:** el mercado mueve ~${plan.detail.volPerDay.toLocaleString('es')} uds/día — si es bajo, tu venta puede tardar; no te sobreexpongas.`);
+  }
+  if (plan.detail?.netUnit) L.push(`**Neto por unidad tras impuesto:** ~${plan.detail.netUnit.toLocaleString('es')} de plata.`);
+  L.push(`**Si no se vende en ~24h:** bajá el precio un poco o llevalo a otra ciudad — no lo dejes clavado.`);
+
   L.push('');
   L.push(`⏱️ **Tiempo estimado: ${plan.days < 1 ? Math.ceil(plan.days * 24) + ' horas' : plan.days.toFixed(1) + ' días'}** (${Math.ceil(plan.activeHours)} h activas) · 💰 Inversión: ${plan.effCapital.toLocaleString('es')}${plan.capitalShort ? ' — ⚠️ con más capital irías más rápido' : ''}`);
   return L.join('\n');

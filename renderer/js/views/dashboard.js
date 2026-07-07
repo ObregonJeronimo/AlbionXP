@@ -20,6 +20,11 @@ export function renderDashboard(container) {
   container.innerHTML = `
     <h1 class="view-title">🏠 Dashboard</h1>
     <p class="view-desc">Pulso rápido del servidor <b>${SERVER_NAMES[state.server]}</b>. Usa las herramientas del menú para cada estrategia — o empieza por la <span class="tool-link" id="dash-guide">Guía de estrategias</span>.</p>
+    <div class="card" style="border-color:var(--accent)">
+      <h3>¿Nuevo? Empezá a hacer plata acá</h3>
+      <p style="font-size:14px;line-height:1.6">Andá al <span class="tool-link" id="dash-plan">Plan de plata</span>: decís cuánta plata tenés y te arma el camino <b>más fácil y seguro</b> paso a paso —
+        incluso <b>sin capital</b> (recolección). Es la forma más rápida de arrancar sin perderte entre las herramientas.</p>
+    </div>
     <div class="cards-row" id="dash-cards">
       <div class="stat-card"><div class="stat-label">Oro</div><div class="stat-value gold" id="dash-gold">…</div><div class="stat-sub">plata por oro</div></div>
       <div class="stat-card"><div class="stat-label">Tendencia oro 24h</div><div class="stat-value" id="dash-gold-trend">…</div><div class="stat-sub" id="dash-gold-trend-sub"></div></div>
@@ -33,6 +38,7 @@ export function renderDashboard(container) {
   `;
 
   container.querySelector('#dash-guide').addEventListener('click', () => window.__navigate('guide'));
+  container.querySelector('#dash-plan').addEventListener('click', () => window.__navigate('planner'));
   load(container);
 }
 

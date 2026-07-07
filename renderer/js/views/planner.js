@@ -7,6 +7,7 @@ import { state, saveSettings, fmt, escapeHtml } from '../state.js';
 import { icon } from '../icons.js';
 
 const TARGETS = [
+  { label: '500 mil', value: 5e5 },   // primera meta alcanzable para el que arranca
   { label: '1 millón', value: 1e6 },
   { label: '5 millones', value: 5e6 },
   { label: '20 millones', value: 20e6 },
@@ -69,6 +70,31 @@ function gatherCard(gathering) {
       </table></div>
       <p class="hint">Honesto: no estimamos plata/hora — depende de tu nivel de recolección, tu montura y la competencia en el nodo.
         Te decimos QUÉ rinde más por unidad y DÓNDE venderlo mejor ahora mismo.</p>
+    </div>`;
+}
+
+// "Empieza aquí": una recomendación en una frase según capital y premium, para que el
+// novato sepa exactamente su primer paso sin interpretar la tabla de planes.
+function starterCard(capital, ordered, gathering) {
+  let rec;
+  if (capital < 500000) {
+    rec = (gathering && gathering.length)
+      ? `Con poco capital, empezá <b>sin arriesgar plata</b>: recolectá <b>${escapeHtml(gathering[0].name || 'materia prima')}</b> (deja ~${fmt(gathering[0].net)}/ud) y vendé en <b>${escapeHtml(gathering[0].city)}</b>. Con lo que juntes, subí a los planes de abajo.`
+      : `Con poco capital, el camino seguro es recolectar en zona azul y vender, o el flipeo si aparece abajo. No arriesgues lo que no podés perder.`;
+  } else if (ordered && ordered.length) {
+    const p = ordered[0];
+    rec = `Con tu capital, tu primer paso es: <b>${escapeHtml(p.title)}</b> (~${fmt(p.effProfit)} por ciclo). Está detallado paso a paso abajo, como "Recomendado para empezar".`;
+  } else {
+    rec = `No hay una ruta de compra rentable ahora mismo. Probá la <b>recolección</b> de arriba, o ampliá la "Frescura de datos" a la izquierda y regenerá.`;
+  }
+  const tips = [];
+  if (!state.premium) tips.push('Sin <b>premium</b> pagás 8% de impuesto al vender (con premium, 4%): activarlo casi duplica tu margen.');
+  tips.push('Regla de oro: nunca metas más plata de la que podés perder, y verificá el primer precio dentro del juego antes de invertir todo.');
+  return `
+    <div class="card" style="border-color:var(--accent)">
+      <h3>Empieza aquí</h3>
+      <p style="font-size:14px;line-height:1.6">${rec}</p>
+      <ul class="hint" style="margin:8px 0 0;padding-left:18px;line-height:1.6">${tips.map(t => `<li>${t}</li>`).join('')}</ul>
     </div>`;
 }
 
@@ -285,8 +311,22 @@ async function run(container, getTarget) {
   };
 
   try {
-    const { plans, gathering } = await buildPlans(target, capital, progress);
+    let { plans, gathering } = await buildPlans(target, capital, progress);
     const mode = container.querySelector('#pln-mode').value;
+
+    // Zero results: no dead-end. Retry once with a wider freshness window (up to 24h)
+    // WITHOUT touching the user's global setting, and flag it in the output.
+    let widened = false;
+    if (!plans.length && state.maxDataAgeMin < 1440) {
+      const orig = state.maxDataAgeMin;
+      state.maxDataAgeMin = 1440;
+      progress('Sin datos frescos: ampliando la ventana a 24 h y reintentando…');
+      try {
+        const r2 = await buildPlans(target, capital, progress);
+        plans = r2.plans; gathering = r2.gathering; widened = plans.length > 0;
+      } catch (_) { /* se maneja abajo */ }
+      finally { state.maxDataAgeMin = orig; }
+    }
 
     if (!plans.length && !(gathering && gathering.length)) {
       results.innerHTML = `<div class="card"><p>No hay oportunidades rentables con datos de las últimas ${state.maxDataAgeMin < 60 ? state.maxDataAgeMin + ' min' : (state.maxDataAgeMin / 60) + ' h'} ahora mismo.
@@ -305,6 +345,8 @@ async function run(container, getTarget) {
     const top = ordered[0];
 
     results.innerHTML = `
+      ${mode === 'beginner' ? starterCard(capital, ordered, gathering) : ''}
+      ${widened ? '<div class="card" style="border-color:#b08d3a"><p class="hint">No había datos muy frescos, así que ampliamos la ventana a <b>24 h</b> solo para esta búsqueda. Verificá el precio en el juego antes de invertir: algunos pueden haber cambiado.</p></div>' : ''}
       ${gatherCard(gathering)}
       ${plans.length ? `
       <div class="cards-row">
