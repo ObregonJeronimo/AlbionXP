@@ -16,21 +16,33 @@ Está en `https://albion-xp.vercel.app/admin.html` (con `noindex`, no sale en Go
 \* Monetag, Cafecito y Mercado Pago no dan una API pública simple de ganancias, así que el
 **monto exacto** se ve en su panel. El panel te deja el acceso directo a cada uno.
 
-## Cómo activarlo (necesitás desplegar el worker una vez)
+## Acceso: login de Google, solo los dueños
 
-El backend es el mismo Cloudflare Worker (`backend/worker/worker.js`). Si ya lo tenías, solo
-agregás la clave; si no, lo desplegás (gratis, sin tarjeta).
+El panel usa **inicio de sesión con Google** y solo deja entrar a **vos y Thiago**
+(`jeroobregon03@gmail.com` y `thiagowendler53@gmail.com`). La lista está en el worker
+(servidor) y el worker **valida el token de Google**: un externo no puede ver los datos
+ni aunque abra el código de la página. Para cambiar quién entra, editás `ADMIN_EMAILS`
+en el worker.
+
+Requisito en Firebase (una vez): Console → Authentication → **Sign-in method** →
+habilitar **Google**; y en **Settings → Authorized domains** agregar `albion-xp.vercel.app`.
+
+## Cómo activarlo (desplegar el worker una vez)
+
+El backend es el mismo Cloudflare Worker (`backend/worker/worker.js`), gratis, sin tarjeta.
 
 1. **Cloudflare** → Workers & Pages → tu worker (o creá uno nuevo pegando `worker.js`).
 2. Settings → Variables:
    - `FIREBASE_PROJECT_ID` = `albionxp-eef13`
+   - `FIREBASE_API_KEY` = la Web API key del proyecto
    - `SA_CLIENT_EMAIL` = `client_email` del service account (del JSON de Firebase)
    - `SA_PRIVATE_KEY` (**secret**) = `private_key` del JSON (PEM completo)
    - `GH_REPO` = `ObregonJeronimo/AlbionXP`
-   - `ADMIN_KEY` (**secret**) = inventá una clave larga (ej. 30 caracteres al azar) — es tu llave del panel.
+   - `ADMIN_EMAILS` = `thiagowendler53@gmail.com,jeroobregon03@gmail.com` (ya viene por defecto)
+   - `ADMIN_KEY` (**secret**, opcional) = respaldo por si querés entrar sin Google.
 3. Deploy. Copiá la URL del worker (`https://albion-xxx.workers.dev`).
-4. Entrá a `https://albion-xp.vercel.app/admin.html`, pegá la **URL del worker** y tu **ADMIN_KEY** → "Ver métricas".
-   Ya vas a ver **descargas** al toque.
+4. Entrá a `https://albion-xp.vercel.app/admin.html` → **"Iniciar sesión con Google"** (con tu
+   cuenta autorizada) → pegá la **URL del worker** → "Ver métricas". Vas a ver **descargas** al toque.
 
 ### Para activar visitas y online
 - **Visitas**: poné esa URL en `web/config.js` → `analyticsUrl` y avisame (redeployo la web). Desde ahí cuenta cada visita.

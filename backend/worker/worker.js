@@ -37,7 +37,7 @@ export default {
       // --- analítica del panel de admin ---
       if (request.method === 'POST' && url.pathname === '/beat') return await beat(request, env);
       if (request.method === 'POST' && url.pathname === '/hit') return await hit(request, env);
-      if (request.method === 'GET' && url.pathname === '/admin') return await adminStats(url, env);
+      if (request.method === 'GET' && url.pathname === '/admin') return await adminStats(request, url, env);
       return json({ ok: true, service: 'albion-silver-hub-backend' });
     } catch (e) {
       console.log('ERROR', e.message);
@@ -251,9 +251,34 @@ async function hit(request, env) {
   return json({ ok: true });
 }
 
-// ---------- Panel de admin (protegido por clave) ----------
-async function adminStats(url, env) {
-  if (url.searchParams.get('key') !== env.ADMIN_KEY) return json({ error: 'no autorizado' }, 401);
+// ---------- Panel de admin (login de Google, solo emails de dueños) ----------
+// Lista blanca de dueños del proyecto. Vive en el SERVIDOR: un externo no la ve
+// ni puede saltearla (la validación del token de Google ocurre acá, no en el navegador).
+const ADMIN_EMAILS_DEFAULT = 'thiagowendler53@gmail.com,jeroobregon03@gmail.com';
+
+async function isOwner(request, url, env) {
+  const allow = (env.ADMIN_EMAILS || ADMIN_EMAILS_DEFAULT).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  // 1) Login con Google (token de Firebase en Authorization: Bearer)
+  const m = (request.headers.get('Authorization') || '').match(/^Bearer (.+)$/);
+  if (m) {
+    try {
+      const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: m[1] }),
+      });
+      if (r.ok) {
+        const u = (await r.json()).users?.[0];
+        const email = (u?.email || '').toLowerCase();
+        if (u && u.emailVerified !== false && allow.includes(email)) return true;
+      }
+    } catch (_) { /* denegar */ }
+  }
+  // 2) Respaldo opcional: clave secreta por querystring (solo si ADMIN_KEY está configurada)
+  if (env.ADMIN_KEY && url.searchParams.get('key') === env.ADMIN_KEY) return true;
+  return false;
+}
+
+async function adminStats(request, url, env) {
+  if (!(await isOwner(request, url, env))) return json({ error: 'no autorizado' }, 403);
   const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
   const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 

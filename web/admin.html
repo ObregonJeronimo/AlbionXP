@@ -10,17 +10,18 @@
   <style>
     body { overflow-y: auto; }
     .admin { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
-    .admin h1 { font-family: var(--display, 'Cinzel'); font-size: 30px; margin-bottom: 4px; }
-    .admin .sub { color: var(--muted, #9c9179); margin-bottom: 28px; font-size: 14px; }
-    .setup { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 26px; }
+    .admin h1 { font-family: 'Cinzel', serif; font-size: 30px; margin-bottom: 4px; }
+    .admin .sub { color: var(--muted, #9c9179); margin-bottom: 26px; font-size: 14px; }
+    .who { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; font-size: 14px; color: var(--muted); }
+    .setup { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 22px; }
     .setup label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 4px; }
-    .setup input { background: #1a1610; color: #e7ddc7; border: 1px solid #4a3a22; border-radius: 6px; padding: 9px 12px; font-family: inherit; min-width: 260px; }
+    .setup input { background: #1a1610; color: #e7ddc7; border: 1px solid #4a3a22; border-radius: 6px; padding: 9px 12px; font-family: inherit; min-width: 320px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
     .metric { border: 1px solid #372c1b; background: linear-gradient(180deg,#1a1610,#151109); border-radius: 12px; padding: 20px 22px; }
     .metric .k { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 8px; }
     .metric .v { font-family: 'Cinzel', serif; font-weight: 700; font-size: 34px; color: #d9a441; font-variant-numeric: tabular-nums; }
     .metric.live .v { color: #7fb069; }
-    .metric .v .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #7fb069; margin-right: 8px; box-shadow: 0 0 8px #7fb069; animation: pulse 1.6s infinite; vertical-align: middle; }
+    .metric .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #7fb069; margin-right: 8px; box-shadow: 0 0 8px #7fb069; animation: pulse 1.6s infinite; vertical-align: middle; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
     .metric .s { font-size: 12px; color: #6f6650; margin-top: 6px; }
     .section-t { font-family: 'Cinzel', serif; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: #d9a441; margin: 34px 0 12px; }
@@ -33,70 +34,122 @@
     .vtable td { padding: 8px 10px; border-bottom: 1px solid #241c12; }
     .vtable td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: #d9a441; }
     .muted { color: var(--muted); font-size: 13px; }
-    #err { color: #cc5b48; margin-top: 12px; }
+    #msg { margin: 12px 0; font-size: 14px; }
+    #msg.err { color: #cc5b48; }
+    .gate { text-align: center; padding: 60px 20px; }
+    .gate p { color: var(--muted); margin: 14px 0 22px; }
   </style>
 </head>
 <body>
   <div id="page">
     <div class="admin">
       <h1>Panel de control</h1>
-      <p class="sub">Métricas privadas de Albion Silver Hub. Solo para vos.</p>
+      <p class="sub">Privado — solo los dueños del proyecto.</p>
 
-      <div class="setup">
-        <div><label>URL del backend (worker)</label><input id="wurl" placeholder="https://albion-pagos.xxx.workers.dev" /></div>
-        <div><label>Clave de admin</label><input id="wkey" type="password" placeholder="tu ADMIN_KEY" /></div>
-        <button class="btn" id="load">Ver métricas</button>
+      <!-- No logueado / no autorizado -->
+      <div id="gate" class="gate" style="display:none">
+        <p id="gate-msg">Iniciá sesión con la cuenta de Google autorizada.</p>
+        <button class="btn big" id="gsignin">Iniciar sesión con Google</button>
       </div>
-      <div id="err"></div>
 
-      <div id="dash" style="display:none">
-        <div class="grid">
-          <div class="metric live"><div class="k">Online ahora</div><div class="v" id="m-online"><span class="dot"></span>—</div><div class="s">con la app abierta (últimos 2 min)</div></div>
-          <div class="metric"><div class="k">Descargas</div><div class="v" id="m-downloads">—</div><div class="s">total del instalador</div></div>
-          <div class="metric"><div class="k">Visitas hoy</div><div class="v" id="m-vtoday">—</div><div class="s">a la web</div></div>
-          <div class="metric"><div class="k">Visitas totales</div><div class="v" id="m-vtotal">—</div></div>
+      <!-- Panel (dueño logueado) -->
+      <div id="panel" style="display:none">
+        <div class="who">
+          <span>Conectado como <b id="who-email"></b></span>
+          <button class="btn secondary" id="gsignout" style="padding:6px 14px;font-size:13px">Cerrar sesión</button>
         </div>
 
-        <div class="section-t">Descargas por versión</div>
-        <table class="vtable"><tbody id="ver-rows"></tbody></table>
-
-        <div class="section-t">Ingresos (paneles oficiales)</div>
-        <p class="muted" style="margin-bottom:10px">Estas plataformas no dan una API pública simple de ganancias, así que el monto exacto se ve en su panel. Acá tenés el acceso directo:</p>
-        <div class="rev">
-          <a id="l-cpm" href="#" target="_blank" rel="noopener"><div class="rk">CPM · Monetag</div><div class="rs">Ganancias de anuncios e impresiones</div></a>
-          <a id="l-cafecito" href="#" target="_blank" rel="noopener"><div class="rk">Donaciones · Cafecito</div><div class="rs">Cafecitos recibidos</div></a>
-          <a id="l-mp" href="#" target="_blank" rel="noopener"><div class="rk">Mercado Pago</div><div class="rs">Movimientos y donaciones/cripto</div></a>
+        <div class="setup">
+          <div><label>URL del backend (worker)</label><input id="wurl" placeholder="https://albion-xxx.workers.dev" /></div>
+          <button class="btn" id="load">Ver métricas</button>
         </div>
+        <div id="msg"></div>
 
-        <p class="muted" id="updated" style="margin-top:22px"></p>
+        <div id="dash" style="display:none">
+          <div class="grid">
+            <div class="metric live"><div class="k">Online ahora</div><div class="v"><span class="dot"></span><span id="m-online">—</span></div><div class="s">con la app abierta (últimos 2 min)</div></div>
+            <div class="metric"><div class="k">Descargas</div><div class="v" id="m-downloads">—</div><div class="s">total del instalador</div></div>
+            <div class="metric"><div class="k">Visitas hoy</div><div class="v" id="m-vtoday">—</div><div class="s">a la web</div></div>
+            <div class="metric"><div class="k">Visitas totales</div><div class="v" id="m-vtotal">—</div></div>
+          </div>
+
+          <div class="section-t">Descargas por versión</div>
+          <table class="vtable"><tbody id="ver-rows"></tbody></table>
+
+          <div class="section-t">Ingresos (paneles oficiales)</div>
+          <p class="muted" style="margin-bottom:10px">Estas plataformas no dan una API pública simple de ganancias; el monto exacto se ve en su panel. Acceso directo:</p>
+          <div class="rev">
+            <a id="l-cpm" href="#" target="_blank" rel="noopener"><div class="rk">CPM · Monetag</div><div class="rs">Ganancias de anuncios e impresiones</div></a>
+            <a id="l-cafecito" href="#" target="_blank" rel="noopener"><div class="rk">Donaciones · Cafecito</div><div class="rs">Cafecitos recibidos</div></a>
+            <a id="l-mp" href="#" target="_blank" rel="noopener"><div class="rk">Mercado Pago</div><div class="rs">Movimientos, donaciones y cripto</div></a>
+          </div>
+
+          <p class="muted" id="updated" style="margin-top:22px"></p>
+        </div>
       </div>
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script>
+    // Dueños permitidos (chequeo de interfaz; la validación REAL la hace el worker).
+    const OWNERS = ['thiagowendler53@gmail.com', 'jeroobregon03@gmail.com'];
+    firebase.initializeApp({
+      apiKey: 'AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU',
+      authDomain: 'albionxp-eef13.firebaseapp.com',
+      projectId: 'albionxp-eef13',
+    });
+    const auth = firebase.auth();
     const $ = (id) => document.getElementById(id);
     const fmt = (n) => (Number(n) || 0).toLocaleString('es');
-    let timer = null;
+    let timer = null, currentUser = null;
 
-    function saveCfg() {
-      localStorage.setItem('adm_url', $('wurl').value.trim());
-      localStorage.setItem('adm_key', $('wkey').value.trim());
-    }
     $('wurl').value = localStorage.getItem('adm_url') || '';
-    $('wkey').value = localStorage.getItem('adm_key') || '';
+
+    $('gsignin').addEventListener('click', () => {
+      auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => {
+        $('gate-msg').textContent = 'No se pudo iniciar sesión: ' + e.message;
+      });
+    });
+    $('gsignout').addEventListener('click', () => auth.signOut());
+
+    auth.onAuthStateChanged((user) => {
+      clearInterval(timer);
+      if (user && OWNERS.includes((user.email || '').toLowerCase())) {
+        currentUser = user;
+        $('who-email').textContent = user.email;
+        $('gate').style.display = 'none';
+        $('panel').style.display = '';
+      } else if (user) {
+        // logueado pero NO autorizado
+        currentUser = null;
+        auth.signOut();
+        $('panel').style.display = 'none';
+        $('gate').style.display = '';
+        $('gate-msg').innerHTML = '<span style="color:#cc5b48">Esa cuenta no está autorizada.</span> Solo los dueños del proyecto pueden entrar.';
+      } else {
+        currentUser = null;
+        $('panel').style.display = 'none';
+        $('gate').style.display = '';
+        $('gate-msg').textContent = 'Iniciá sesión con la cuenta de Google autorizada.';
+      }
+    });
 
     async function load() {
-      saveCfg();
+      if (!currentUser) return;
       const url = $('wurl').value.trim().replace(/\/$/, '');
-      const key = $('wkey').value.trim();
-      $('err').textContent = '';
-      if (!url || !key) { $('err').textContent = 'Completá la URL del worker y la clave.'; return; }
+      localStorage.setItem('adm_url', url);
+      $('msg').textContent = ''; $('msg').className = '';
+      if (!url) { $('msg').textContent = 'Pegá la URL del worker.'; $('msg').className = 'err'; return; }
       try {
-        const r = await fetch(`${url}/admin?key=${encodeURIComponent(key)}`);
-        if (!r.ok) throw new Error(r.status === 401 ? 'Clave incorrecta.' : 'Error ' + r.status);
+        const token = await currentUser.getIdToken();
+        const r = await fetch(`${url}/admin`, { headers: { Authorization: 'Bearer ' + token } });
+        if (r.status === 403) throw new Error('El worker rechazó tu cuenta (revisá ADMIN_EMAILS en el worker).');
+        if (!r.ok) throw new Error('Error ' + r.status);
         const d = await r.json();
         $('dash').style.display = '';
-        $('m-online').innerHTML = '<span class="dot"></span>' + fmt(d.online);
+        $('m-online').textContent = fmt(d.online);
         $('m-downloads').textContent = fmt(d.downloads);
         $('m-vtoday').textContent = fmt(d.visitsToday);
         $('m-vtotal').textContent = fmt(d.visitsTotal);
@@ -104,7 +157,8 @@
         if (d.links) { $('l-cpm').href = d.links.cpm; $('l-cafecito').href = d.links.cafecito; $('l-mp').href = d.links.mercadopago; }
         $('updated').textContent = 'Actualizado: ' + new Date(d.updatedAt).toLocaleString('es');
       } catch (e) {
-        $('err').textContent = 'No se pudo cargar: ' + e.message + ' (¿desplegaste el worker con /admin y ADMIN_KEY?)';
+        $('msg').textContent = 'No se pudo cargar: ' + e.message + ' (¿desplegaste el worker?)';
+        $('msg').className = 'err';
       }
     }
     $('load').addEventListener('click', () => { load(); clearInterval(timer); timer = setInterval(load, 20000); });

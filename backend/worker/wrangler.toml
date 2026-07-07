@@ -13,10 +13,15 @@ FIREBASE_API_KEY = "PEGAR_WEB_API_KEY"
 FIREBASE_PROJECT_ID = "albionxp-eef13"
 SA_CLIENT_EMAIL = "PEGAR_CLIENT_EMAIL"
 GH_REPO = "ObregonJeronimo/AlbionXP"
+# Dueños del panel de admin (login con Google). Si no la ponés, usa la lista
+# que ya está hardcodeada en el worker (thiago + jero). Editá acá para cambiarla.
+ADMIN_EMAILS = "thiagowendler53@gmail.com,jeroobregon03@gmail.com"
 PLAN_AMOUNT = "5000"
 PLAN_TITLE = "Albion Silver Hub — premium sin anuncios"
-# ADMIN_KEY va como SECRET (npx wrangler secret put ADMIN_KEY) — es la clave del panel /admin.
-# Solo el panel de admin y la analítica (/beat /hit /admin) requieren: SA_PRIVATE_KEY (secret) + SA_CLIENT_EMAIL + FIREBASE_PROJECT_ID + ADMIN_KEY.
+# El panel /admin usa LOGIN DE GOOGLE (solo los emails de ADMIN_EMAILS). El worker
+# valida el token de Google del lado del servidor, así ningún externo puede entrar.
+# ADMIN_KEY (secret, opcional) queda como respaldo por si querés entrar sin Google.
+# La analítica (/beat /hit /admin) requiere: SA_PRIVATE_KEY (secret) + SA_CLIENT_EMAIL + FIREBASE_PROJECT_ID + FIREBASE_API_KEY.
 # Campañas de anuncios (JSON en una línea). Edítalo en el panel de Cloudflare
 # (Settings > Variables) y los usuarios lo reciben al instante, sin recompilar.
 ADS_JSON = '[{"id":"sponsor-slot","title":"📢 Tu anuncio aquí","body":"Patrocina Albion Silver Hub","url":"mailto:jeroobregon03@gmail.com?subject=Patrocinio","color":"#e3b341"}]'
