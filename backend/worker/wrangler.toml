@@ -22,8 +22,10 @@ simple = { limit = 2, period = 60 }
 #   MP_WEBHOOK_SECRET (secret) — clave secreta del webhook de MP
 #   SA_PRIVATE_KEY   (secret) — private_key del service account de Firebase
 [vars]
-FIREBASE_API_KEY = "PEGAR_WEB_API_KEY"
+# API key web de Firebase (PÚBLICA por diseño, ya está en config.js). Pre-cargada.
+FIREBASE_API_KEY = "AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU"
 FIREBASE_PROJECT_ID = "albionxp-eef13"
+# ↓ SOLO ESTO tenés que completar: el "client_email" de tu JSON de service account.
 SA_CLIENT_EMAIL = "PEGAR_CLIENT_EMAIL"
 GH_REPO = "ObregonJeronimo/AlbionXP"
 # Dueños del panel de admin (login con Google). Si no la ponés, usa la lista
