@@ -158,8 +158,8 @@
         $('ver-rows').innerHTML = byVer.map(v => `<tr><td>${v.tag}</td><td>${fmt(v.n)}</td></tr>`).join('')
           || '<tr><td class="muted">Sin descargas aún</td><td>0</td></tr>';
       } catch (e) { $('m-downloads').textContent = '—'; }
-      $('l-cpm').href = 'https://publishers.monetag.com/';
-      $('l-cafecito').href = 'https://cafecito.app/';
+      $('l-cpm').href = 'https://monetag.com/';
+      $('l-cafecito').href = 'https://cafecito.app/dashboard';
       $('l-mp').href = 'https://www.mercadopago.com.ar/activities';
     }
 
