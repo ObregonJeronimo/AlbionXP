@@ -6,6 +6,20 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
+## [0.1.6] — 2026-07-07
+### El Plan de plata — más métodos y a prueba de principiantes
+- **Modo Principiante vs Óptimo**: en Principiante, el Plan ordena por lo más **fácil
+  y seguro** para tu capital (no por lo más rápido) y te muestra UN plan recomendado
+  paso a paso, con el resto plegado. Un novato ya no ve primero una corrida a zona roja.
+- **Recolección** (el método sin capital, ideal para arrancar de cero): el Plan te dice
+  qué materia prima **rinde más plata por unidad ahora mismo y en qué ciudad venderla**
+  (honesto: no inventamos plata/hora, que depende de tu nivel y del nodo).
+- **Flipeo en la misma ciudad** (casi AFK, sin viajar ni cruzar zona roja): poné orden de
+  compra y de venta y ganá el spread. Con guardas de liquidez y anti-listings-fantasma.
+- **Crafteo** ahora también es una estrategia del Plan (cesta rentable → Mercado Negro),
+  con el mismo cálculo probado de la vista de Crafteo.
+- Ranking por perfil, badges de riesgo coherentes y pasos aún más concretos.
+
 ## [0.1.5] — 2026-07-07
 ### Seguridad y anti-abuso (auditoría previa a distribución)
 - **Moderación del foro**: los dueños pueden borrar cualquier post o comentario

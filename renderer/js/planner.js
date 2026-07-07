@@ -8,8 +8,9 @@
 // - Throughput is capped at a fraction of observed daily volume so the plan
 //   doesn't assume you can dump 10k units into a market that trades 500/day.
 import { getPrices, getHistoryMulti } from './api.js';
-import { CITIES, sellOrderFees, instantSellFees, RRR, REFINE_BONUS_CITY, RESOURCES, REFINE_INPUTS, rawId, refinedId, stationFee, refinedItemValue, maxEnch } from './constants.js';
+import { CITIES, sellOrderFees, instantSellFees, RRR, REFINE_BONUS_CITY, RESOURCES, REFINE_INPUTS, rawId, refinedId, stationFee, refinedItemValue, maxEnch, SETUP_FEE, CRAFT_RRR } from './constants.js';
 import { gearUniverse, liquidUniverse } from './gear.js';
+import { loadRecipes, getRecipe, recipeMap, craftProfit } from './recipes.js';
 import { itemName } from './items.js';
 import { state, dataAge } from './state.js';
 
@@ -24,9 +25,9 @@ function fresh(price, date) {
 // ---------- Strategy scanners: each returns opportunities normalized to
 // { kind, title, steps[], profitPerCycle, capitalPerCycle, minutesPerCycle, cyclesPerDay } ----------
 
-async function scanTransport() {
-  const universe = liquidUniverse();
-  const prices = await getPrices(universe, CITIES, [1]);
+// Receives the shared liquid-universe prices (fetched once in buildPlans) so the
+// transport and city-flip scanners don't each hit the rate-limited API.
+async function scanTransport(prices) {
   const feeRate = sellOrderFees(state.premium);
 
   const byItem = new Map();
@@ -217,6 +218,172 @@ async function scanRefining() {
   return out.slice(0, 3);
 }
 
+// City flip: buy with a buy order and sell with a sell order in the SAME city — no
+// travel, no red zone, near-AFK. Reuses the shared liquid prices. Low risk, ideal for
+// a beginner with some capital and little time.
+async function scanCityFlip(prices) {
+  const feeRate = sellOrderFees(state.premium);
+  const flips = [];
+  for (const p of prices) {
+    if (!fresh(p.sellMin, p.sellMinDate) || !fresh(p.buyMax, p.buyMaxDate)) continue;
+    // To actually get filled you must outbid: buy at buyMax+1, undercut to sellMin-1.
+    // Buy orders also pay the 2.5% setup fee; sell orders pay tax + setup (sellOrderFees).
+    const buyCost = (p.buyMax + 1) * (1 + SETUP_FEE);
+    const sell = p.sellMin - 1;
+    const net = sell * (1 - feeRate) - buyCost;
+    if (net <= 0) continue;
+    const roi = net / buyCost;
+    if (roi < 0.12) continue; // below this, market friction eats the flip
+    flips.push({ itemId: p.itemId, city: p.city, buyCost, sell, net, roi });
+  }
+  if (!flips.length) return [];
+  flips.sort((a, b) => b.roi - a.roi);
+  const top = flips.slice(0, 12);
+
+  // Liquidity + ghost-listing guard (needs rotation, else the order never fills)
+  const byCity = new Map();
+  for (const f of top) {
+    if (!byCity.has(f.city)) byCity.set(f.city, []);
+    byCity.get(f.city).push(f.itemId);
+  }
+  const vol = new Map();
+  for (const [city, itemIds] of byCity) {
+    try {
+      const hist = await getHistoryMulti(itemIds, { location: city, timeScale: 24, quality: 1 });
+      for (const s of hist) {
+        const recent = s.data.slice(-7);
+        if (!recent.length) continue;
+        const days = Math.max(1, Math.min(7, recent.length));
+        const units = recent.reduce((a, p) => a + p.itemCount, 0);
+        const avg = units ? recent.reduce((a, p) => a + p.avgPrice * p.itemCount, 0) / units : null;
+        vol.set(s.itemId + '|' + city, { unitsPerDay: units / days, avgPrice: avg });
+      }
+    } catch (_) { /* no volume -> skipped below */ }
+  }
+
+  const out = [];
+  for (const f of top) {
+    const info = vol.get(f.itemId + '|' + f.city);
+    if (!info || info.unitsPerDay < 50) continue; // order flipping needs real rotation
+    let sell = f.sell;
+    if (info.avgPrice) sell = Math.min(sell, Math.round(info.avgPrice * 1.15)); // no ghost sell
+    const net = sell * (1 - feeRate) - f.buyCost;
+    if (net <= 0) continue;
+    const roi = net / f.buyCost;
+    if (roi < 0.12) continue;
+    const unitsPerRound = Math.max(10, Math.floor((info.unitsPerDay * VOLUME_CAPTURE) / 2));
+    out.push({
+      kind: 'cityflip',
+      title: `Flipeo en ${f.city}: ${itemName(f.itemId)} (sin viajar)`,
+      profitPerCycle: net * unitsPerRound,
+      capitalPerCycle: f.buyCost * unitsPerRound,
+      minutesPerCycle: 10,       // place/collect orders; the rest is waiting
+      cyclesPerDay: 2,           // check ~twice a day
+      detail: { item: itemName(f.itemId), city: f.city, buy: Math.round(f.buyCost), sell, netUnit: Math.round(net), roi, unitsPerRound, volPerDay: Math.round(info.unitsPerDay) },
+    });
+  }
+  return out;
+}
+
+// Crafting -> Black Market basket, using the real game recipes (same math as the
+// craft view via the shared craftProfit helper). Requires a Caerleon (red-zone) trip.
+async function scanCraft() {
+  let n = 0;
+  try { n = await loadRecipes(); } catch (_) { return []; }
+  if (!n) return [];
+  const candidates = gearUniverse([4, 5, 6], [0, 1]).filter(id => recipeMap.has(id));
+  if (!candidates.length) return [];
+  const matSet = new Set();
+  for (const id of candidates) for (const r of getRecipe(id).resources) matSet.add(r.id);
+
+  let matPrices, bmPrices;
+  try {
+    [matPrices, bmPrices] = await Promise.all([
+      getPrices([...matSet], CITIES, [1]),
+      getPrices(candidates, ['Black Market'], null),
+    ]);
+  } catch (_) { return []; }
+
+  const matBest = new Map();
+  for (const p of matPrices) {
+    if (!fresh(p.sellMin, p.sellMinDate)) continue;
+    const cur = matBest.get(p.itemId);
+    if (!cur || p.sellMin < cur.sellMin) matBest.set(p.itemId, p);
+  }
+
+  const rows = [];
+  for (const id of candidates) {
+    const recipe = getRecipe(id);
+    const bm = bmPrices.find(p => p.itemId === id && p.quality === 1 && fresh(p.buyMax, p.buyMaxDate));
+    if (!bm) continue;
+    const pr = craftProfit(recipe, matBest, { rrr: CRAFT_RRR.bonusCity, feePer100: 100, premium: state.premium, bmBuyMax: bm.buyMax, bmTaxed: true });
+    if (!pr || pr.net <= 0) continue;
+    rows.push({ id, cost: pr.cost, bmPays: bm.buyMax, net: pr.net });
+  }
+  if (!rows.length) return [];
+  rows.sort((a, b) => b.net - a.net);
+  const basket = rows.slice(0, 10);
+  return [{
+    kind: 'craft',
+    title: `Crafteo: cesta de ${basket.length} items → Mercado Negro ⚠️`,
+    profitPerCycle: basket.reduce((s, o) => s + o.net, 0),
+    capitalPerCycle: basket.reduce((s, o) => s + o.cost, 0),
+    minutesPerCycle: RUN_MINUTES.caerleon,
+    cyclesPerDay: 3,
+    detail: { risky: true, basket: basket.map(o => ({ item: itemName(o.id), cost: Math.round(o.cost), bmPays: o.bmPays, net: Math.round(o.net) })) },
+  }];
+}
+
+// Gathering: which raw resource yields the most silver PER UNIT right now and where to
+// sell it. The no-capital starter method. We can't estimate silver/hour (the API has no
+// gather rate — it depends on your skill, mount and node competition), so this is a
+// qualitative pick returned SEPARATELY (it doesn't fit the time-based plan pipeline).
+async function scanGathering() {
+  const ids = [];
+  for (const res of Object.keys(RESOURCES)) {
+    for (let t = 2; t <= 6; t++) ids.push(rawId(res, t, 0)); // beginner tiers, unenchanted
+  }
+  let prices;
+  try { prices = await getPrices(ids, CITIES, [1]); } catch (_) { return []; }
+  const instFee = instantSellFees(state.premium);
+  const ordFee = sellOrderFees(state.premium);
+
+  const byItem = new Map();
+  for (const p of prices) {
+    if (!byItem.has(p.itemId)) byItem.set(p.itemId, []);
+    byItem.get(p.itemId).push(p);
+  }
+  const out = [];
+  for (const [itemId, rows] of byItem) {
+    let best = null;
+    for (const r of rows) {
+      if (fresh(r.buyMax, r.buyMaxDate)) {
+        const net = r.buyMax * (1 - instFee);
+        if (!best || net > best.net) best = { itemId, name: itemName(itemId), city: r.city, net, how: 'instant', price: r.buyMax };
+      }
+      if (fresh(r.sellMin, r.sellMinDate)) {
+        const net = (r.sellMin - 1) * (1 - ordFee);
+        if (!best || net > best.net) best = { itemId, name: itemName(itemId), city: r.city, net, how: 'order', price: r.sellMin };
+      }
+    }
+    if (best && best.net > 0) out.push(best);
+  }
+  out.sort((a, b) => b.net - a.net);
+  return out.slice(0, 6);
+}
+
+// Beginner-friendliness score (higher = easier/safer). Lets the view rank a novice's
+// plan by ease + safety + capital fit instead of raw speed.
+export function beginnerScore(p) {
+  let s = 0;
+  if (p.kind === 'cityflip') s += 3;                    // no travel, no red zone
+  else if (p.kind === 'refine') s += 3;                 // in-city with bonus, no PvP
+  else if (p.kind === 'transport') s += p.detail?.risky ? 1 : 2;
+  else s += 0;                                          // blackmarket / craft = Caerleon (red)
+  if (!p.capitalShort) s += 1;                          // one full batch fits their capital
+  return s;
+}
+
 // ---------- Plan assembly ----------
 
 /**
@@ -224,14 +391,22 @@ async function scanRefining() {
  * Each plan: strategy scaled by capital, honest time estimate to hit target.
  */
 export async function buildPlans(targetSilver, capital, onProgress = () => {}) {
-  onProgress('Escaneando rutas de transporte…');
-  const transport = await scanTransport().catch(() => []);
+  onProgress('Escaneando transporte y flipeo en ciudad…');
+  // Transport and city-flip share ONE liquid-universe price fetch (the API rate limit
+  // of 100/min is the real bottleneck — don't fetch the same prices twice).
+  const liquidPrices = await getPrices(liquidUniverse(), CITIES, [1]).catch(() => []);
+  const transport = await scanTransport(liquidPrices).catch(() => []);
+  const cityflip = await scanCityFlip(liquidPrices).catch(() => []);
   onProgress('Escaneando Mercado Negro…');
   const bm = await scanBlackMarket().catch(() => []);
   onProgress('Escaneando refinado en ciudades con bono…');
   const refine = await scanRefining().catch(() => []);
+  onProgress('Escaneando crafteo → Mercado Negro…');
+  const craft = await scanCraft().catch(() => []);
+  onProgress('Buscando el mejor recurso para recolectar…');
+  const gathering = await scanGathering().catch(() => []);
 
-  const all = [...transport, ...bm, ...refine];
+  const all = [...transport, ...cityflip, ...bm, ...refine, ...craft];
   const plans = [];
 
   for (const opp of all) {
@@ -245,6 +420,7 @@ export async function buildPlans(targetSilver, capital, onProgress = () => {}) {
     const cycles = Math.ceil(targetSilver / effProfit);
     const days = cycles / opp.cyclesPerDay;
     const activeHours = (cycles * opp.minutesPerCycle) / 60;
+    const capitalShort = opp.capitalPerCycle > capital;
 
     plans.push({
       ...opp,
@@ -254,12 +430,17 @@ export async function buildPlans(targetSilver, capital, onProgress = () => {}) {
       days: Math.max(days, activeHours / 8), // can't play more than ~8h/day
       activeHours,
       silverPerActiveHour: Math.round(effProfit / (opp.minutesPerCycle / 60)),
-      capitalShort: opp.capitalPerCycle > capital,
+      capitalShort,
+      beginner: beginnerScore({ ...opp, capitalShort }),
     });
   }
 
   plans.sort((a, b) => a.days - b.days);
-  return { plans: plans.slice(0, 5), scanned: { transport: transport.length, bm: bm.length, refine: refine.length } };
+  return {
+    plans: plans.slice(0, 6),
+    gathering,                              // qualitative, no-capital method (rendered apart)
+    scanned: { transport: transport.length, cityflip: cityflip.length, bm: bm.length, refine: refine.length, craft: craft.length },
+  };
 }
 
 // ---------- Template narration (fallback when no AI is available) ----------
@@ -286,6 +467,16 @@ export function templateNarration(plan, targetSilver) {
     L.push(`2. Refina con el bono de ciudad (retorno ${(d.rrr * 100).toFixed(1)}%; con foco sería aún mejor).`);
     L.push(`3. Lista el producto con orden de venta en la misma ciudad.`);
     L.push(`4. Beneficio ~${plan.effProfit.toLocaleString('es')} por tanda (~${d.netUnit.toLocaleString('es')}/ud). Repite ${plan.cycles} tandas (~${plan.cyclesPerDay}/día).`);
+  } else if (plan.kind === 'cityflip') {
+    L.push(`1. En **${d.city}** poné una **orden de compra** de ${d.item} a ${d.buy.toLocaleString('es')} (1 más que la mejor compra actual, para ponerte primero en la cola).`);
+    L.push(`2. Cuando se te llene, poné una **orden de venta** a ${d.sell.toLocaleString('es')} (1 menos que la venta más barata).`);
+    L.push(`3. No viajás ni cruzás zona roja: revisá tus órdenes ~2 veces al día. Es casi AFK.`);
+    L.push(`4. Ganás ~${d.netUnit.toLocaleString('es')}/ud (${(d.roi * 100).toFixed(0)}% ROI). El mercado mueve ~${d.volPerDay.toLocaleString('es')} uds/día, así que tus órdenes rotan.`);
+  } else if (plan.kind === 'craft') {
+    L.push(`1. Craftea esta cesta donde tengas especialización (mirá la vista "Crafteo" para los bonos por ciudad) — coste total ~${plan.effCapital.toLocaleString('es')}:`);
+    for (const b of d.basket.slice(0, 6)) L.push(`   • ${b.item}: cuesta ~${b.cost.toLocaleString('es')} → el MN paga ${b.bmPays.toLocaleString('es')} (+${b.net.toLocaleString('es')})`);
+    L.push(`2. Llevá lo crafteado a **Caerleon** ⚠️ (zona roja: montura rápida, sin sobrecarga) y vendé al Mercado Negro.`);
+    L.push(`3. Beneficio ~${plan.effProfit.toLocaleString('es')} por tanda. El crafteo sale calidad Normal ~69% de las veces; las calidades altas rinden algo más.`);
   }
   L.push('');
   L.push(`⏱️ **Tiempo estimado: ${plan.days < 1 ? Math.ceil(plan.days * 24) + ' horas' : plan.days.toFixed(1) + ' días'}** (${Math.ceil(plan.activeHours)} h activas) · 💰 Inversión: ${plan.effCapital.toLocaleString('es')}${plan.capitalShort ? ' — ⚠️ con más capital irías más rápido' : ''}`);

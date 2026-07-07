@@ -21,6 +21,57 @@ function mdToHtml(md) {
   return h;
 }
 
+// One strategy card (step-by-step plan). `highlight` = the beginner-recommended one.
+function strategyCard(p, i, target, highlight = false) {
+  const risky = p.detail?.risky || p.kind === 'blackmarket';
+  return `
+    <div class="strategy"${highlight ? ' style="border-color:var(--accent)"' : ''}>
+      <div class="strategy-head">
+        <h3>${highlight ? '<span class="badge safe">Recomendado para empezar</span> ' : `<span class="rank">${i + 1}º</span> `}${escapeHtml(p.title)}</h3>
+        <span class="badge ${risky ? 'risk' : 'safe'}">${risky ? 'Riesgo: zona roja' : 'Riesgo bajo'}</span>
+        <span class="badge diff-2">${fmt(p.silverPerActiveHour)}/h activa</span>
+      </div>
+      <p><b>${icon('clock', 14)} ${p.days < 1 ? Math.ceil(p.days * 24) + ' horas' : p.days.toFixed(1) + ' días'}</b>
+         (${Math.ceil(p.activeHours)} h activas en ${p.cycles} ciclos) ·
+         <b>${icon('coin', 14)} Inversión: ${fmt(p.effCapital)}</b> ·
+         ~${fmt(p.effProfit)}/ciclo${p.capitalShort ? ' · <span class="neg">capital corto: con más irías más rápido</span>' : ''}</p>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.7">${mdToHtml(templateNarration(p, target))}</div>
+    </div>`;
+}
+
+// Beginner layout: the recommended plan expanded, the rest tucked into a details toggle.
+function beginnerLayout(ordered, target) {
+  const rest = ordered.slice(1);
+  const more = rest.length ? `
+    <details style="margin-top:6px">
+      <summary class="hint" style="cursor:pointer;padding:6px 0">Ver otras ${rest.length} opciones (más rápidas, pero con más riesgo o capital)</summary>
+      ${rest.map((p, i) => strategyCard(p, i + 1, target)).join('')}
+    </details>` : '';
+  return strategyCard(ordered[0], 0, target, true) + more;
+}
+
+// The no-capital method: which raw resource yields the most silver per unit right now.
+function gatherCard(gathering) {
+  if (!gathering || !gathering.length) return '';
+  return `
+    <div class="card" style="border-color:var(--accent)">
+      <h3>Método sin capital: recolección</h3>
+      <p class="hint">¿Estás empezando y no querés arriesgar plata? Este es el camino: andá a zona azul o amarilla (segura),
+        recolectá y vendé. Ahora mismo, lo que más plata deja por unidad recolectada:</p>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Recurso</th><th>Plata/ud (neto)</th><th>Vender en</th><th>Cómo vender</th></tr></thead>
+        <tbody>${gathering.map(g => `<tr>
+          <td class="txt">${escapeHtml(g.name || '')}</td>
+          <td class="pos">${fmt(g.net)}</td>
+          <td class="txt">${escapeHtml(g.city)}</td>
+          <td>${g.how === 'instant' ? 'venta instantánea (a la orden de compra)' : 'orden de venta (más lento, algo más de plata)'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <p class="hint">Honesto: no estimamos plata/hora — depende de tu nivel de recolección, tu montura y la competencia en el nodo.
+        Te decimos QUÉ rinde más por unidad y DÓNDE venderlo mejor ahora mismo.</p>
+    </div>`;
+}
+
 export function renderPlanner(container) {
   container.innerHTML = `
     <h1 class="view-title">🧭 Plan de plata</h1>
@@ -45,6 +96,13 @@ export function renderPlanner(container) {
             <option value="5000000">5M</option>
             <option value="20000000">20M</option>
             <option value="100000000">100M</option>
+          </select>
+        </div>
+        <div class="ctrl">
+          <label>Modo</label>
+          <select id="pln-mode">
+            <option value="beginner" selected>Principiante (fácil y seguro)</option>
+            <option value="optimal">Óptimo (lo más rápido)</option>
           </select>
         </div>
         <button class="btn" id="pln-go">Generar plan</button>
@@ -227,9 +285,10 @@ async function run(container, getTarget) {
   };
 
   try {
-    const { plans } = await buildPlans(target, capital, progress);
+    const { plans, gathering } = await buildPlans(target, capital, progress);
+    const mode = container.querySelector('#pln-mode').value;
 
-    if (!plans.length) {
+    if (!plans.length && !(gathering && gathering.length)) {
       results.innerHTML = `<div class="card"><p>No hay oportunidades rentables con datos de las últimas ${state.maxDataAgeMin < 60 ? state.maxDataAgeMin + ' min' : (state.maxDataAgeMin / 60) + ' h'} ahora mismo.
         Prueba a ampliar la "Frescura de datos" en el panel izquierdo (con ventanas muy cortas dependes de que alguien haya escaneado ese mercado hace minutos),
         vuelve a intentarlo en un rato o cambia de servidor.</p></div>`;
@@ -237,42 +296,41 @@ async function run(container, getTarget) {
       return;
     }
 
+    // Beginner mode reorders by ease/safety/capital-fit; optimal keeps speed order.
+    const ordered = mode === 'beginner'
+      ? [...plans].sort((a, b) => (b.beginner - a.beginner) || (a.days - b.days))
+      : plans;
+
     const targetLabel = (target / 1e6).toLocaleString('es', { maximumFractionDigits: 1 }) + 'M';
+    const top = ordered[0];
+
     results.innerHTML = `
+      ${gatherCard(gathering)}
+      ${plans.length ? `
       <div class="cards-row">
         <div class="stat-card"><div class="stat-label">Objetivo</div><div class="stat-value gold">${targetLabel}</div></div>
-        <div class="stat-card"><div class="stat-label">Ruta más rápida</div><div class="stat-value pos">${plans[0].days < 1 ? Math.ceil(plans[0].days * 24) + ' h' : plans[0].days.toFixed(1) + ' días'}</div><div class="stat-sub">${Math.ceil(plans[0].activeHours)} h activas de juego</div></div>
+        <div class="stat-card"><div class="stat-label">${mode === 'beginner' ? 'Plan recomendado' : 'Ruta más rápida'}</div><div class="stat-value pos">${top.days < 1 ? Math.ceil(top.days * 24) + ' h' : top.days.toFixed(1) + ' días'}</div><div class="stat-sub">${Math.ceil(top.activeHours)} h activas de juego</div></div>
         <div class="stat-card"><div class="stat-label">Mejor plata/h activa</div><div class="stat-value">${fmt(Math.max(...plans.map(p => p.silverPerActiveHour)))}</div></div>
       </div>
 
-      ${plans.map((p, i) => `
-        <div class="strategy">
-          <div class="strategy-head">
-            <h3><span class="rank">${i + 1}º</span> ${escapeHtml(p.title)}</h3>
-            <span class="badge ${p.detail?.risky || p.kind === 'blackmarket' ? 'risk' : 'safe'}">${p.detail?.risky || p.kind === 'blackmarket' ? 'Riesgo: zona roja' : 'Riesgo bajo'}</span>
-            <span class="badge diff-2">${fmt(p.silverPerActiveHour)}/h activa</span>
-          </div>
-          <p><b>${icon('clock', 14)} ${p.days < 1 ? Math.ceil(p.days * 24) + ' horas' : p.days.toFixed(1) + ' días'}</b>
-             (${Math.ceil(p.activeHours)} h activas en ${p.cycles} ciclos) ·
-             <b>${icon('coin', 14)} Inversión: ${fmt(p.effCapital)}</b> ·
-             ~${fmt(p.effProfit)}/ciclo${p.capitalShort ? ' · <span class="neg">capital corto: con más irías más rápido</span>' : ''}</p>
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.7">${mdToHtml(templateNarration(p, target))}</div>
-        </div>`).join('')}
+      ${mode === 'beginner' ? beginnerLayout(ordered, target) : ordered.map((p, i) => strategyCard(p, i, target)).join('')}
 
       <div class="card" id="pln-ai-card">
         <h3>${icon('spark', 18)} Análisis del coach IA</h3>
         <div id="pln-ai-out" class="loading"><span class="spinner"></span>Preparando narración…</div>
-      </div>
+      </div>` : ''}
       <p class="hint">Los tiempos son estimaciones conservadoras con datos de este momento: los precios se mueven — regenera el plan cada sesión.
         Verifica la primera compra en el juego antes de meter todo el capital.</p>
     `;
 
-    // AI narration of the top plan (async, never blocks the plan itself)
+    if (!ordered.length) { goBtn.disabled = false; return; } // solo recolección: sin narración IA
+
+    // AI narration of the recommended plan (async, never blocks the plan itself)
     const aiOut = results.querySelector('#pln-ai-out');
-    const planSummary = plans.slice(0, 3).map((p, i) => `PLAN ${i + 1}: ${p.title}\n${templateNarration(p, target)}`).join('\n\n');
+    const planSummary = ordered.slice(0, 3).map((p, i) => `PLAN ${i + 1}: ${p.title}\n${templateNarration(p, target)}`).join('\n\n');
     const answer = await askAI(
       AI_SYSTEM_PROMPT,
-      `Objetivo del jugador: ${targetLabel} de plata. Capital: ${fmt(capital)}. Premium: ${state.premium ? 'sí' : 'no'}. Servidor: ${state.server}.\n\nPLANES CALCULADOS (datos reales):\n${planSummary}\n\nNarra el PLAN 1 paso a paso como coach, menciona brevemente cuándo convendría el 2 como alternativa.`,
+      `Objetivo del jugador: ${targetLabel} de plata. Capital: ${fmt(capital)}. Premium: ${state.premium ? 'sí' : 'no'}. Servidor: ${state.server}. Modo: ${mode === 'beginner' ? 'principiante (prioriza fácil y seguro)' : 'óptimo (prioriza rápido)'}.\n\nPLANES CALCULADOS (datos reales, ya ordenados por prioridad del modo):\n${planSummary}\n\nNarra el PLAN 1 paso a paso como coach para ese perfil, menciona brevemente cuándo convendría el 2 como alternativa.`,
       (msg) => { aiOut.innerHTML = `<span class="spinner"></span>${escapeHtml(msg)}`; }
     );
 
@@ -281,7 +339,8 @@ async function run(container, getTarget) {
       aiOut.innerHTML = `<div style="font-size:13px;line-height:1.7">${mdToHtml(answer.text)}</div>
         <p class="hint" style="margin-top:8px">Narrado por ${escapeHtml(answer.provider)} — los números provienen del motor de datos, no de la IA.</p>`;
     } else {
-      results.querySelector('#pln-ai-card').remove();
+      const c = results.querySelector('#pln-ai-card');
+      if (c) c.remove();
     }
   } catch (e) {
     results.innerHTML = `<div class="error-box">Error generando el plan: ${escapeHtml(e.message)}</div>`;

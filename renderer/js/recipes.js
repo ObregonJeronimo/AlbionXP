@@ -2,6 +2,8 @@
 // XML->JSON quirks: attributes are '@'-prefixed strings; craftingrequirements
 // and craftresource are dict-or-list (normalize); enchanted equipment recipes
 // live in enchantments.enchantment[] on the base item.
+import { stationFee, instantSellFees } from './constants.js';
+
 const RAW_ITEMS_URL = 'https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/items.json';
 
 // Map<marketItemId, { resources: [{id, count}], focus, outCount, itemValue, category }>
@@ -113,4 +115,22 @@ export async function loadRecipes() {
 
 export function getRecipe(itemId) {
   return recipeMap.get(itemId) || null;
+}
+
+// Pure helper: cost per unit + net profit selling one crafted unit to a Black Market
+// buy order. Shared by the craft view and the plan's craft scanner so both stay in sync.
+// matBest: Map<materialId, {sellMin}> (cheapest fresh material price). Returns null if a
+// material price is missing. RRR only applies to raw/refined mats; artifacts are 100% consumed.
+export function craftProfit(recipe, matBest, { rrr, feePer100, premium, bmBuyMax, bmTaxed = true }) {
+  let returnable = 0, artifact = 0;
+  for (const r of recipe.resources) {
+    const m = matBest.get(r.id);
+    if (!m || !m.sellMin) return null;
+    if (r.id.includes('ARTEFACT')) artifact += m.sellMin * r.count;
+    else returnable += m.sellMin * r.count;
+  }
+  const cost = (returnable * (1 - rrr) + artifact + stationFee(recipe.itemValue, feePer100)) / (recipe.outCount || 1);
+  const fee = bmTaxed ? instantSellFees(premium) : 0;
+  const net = bmBuyMax * (1 - fee) - cost;
+  return { cost, net, roi: cost > 0 ? net / cost : 0 };
 }
