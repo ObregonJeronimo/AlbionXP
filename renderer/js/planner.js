@@ -179,11 +179,15 @@ async function scanRefining() {
         const prev = get(refinedId(res, t - 1, t - 1 >= 4 ? e : 0));
         const outP = get(refinedId(res, t, e));
         if (!raw || !prev || !outP) continue;
-        const inputCost = (inp.raw * raw.sellMin + inp.prev * prev.sellMin) * (1 - RRR.bonusCity) + stationFee(refinedItemValue(t, e), 100);
+        const matBase = inp.raw * raw.sellMin + inp.prev * prev.sellMin;
+        const fee = stationFee(refinedItemValue(t, e), 100);
+        const inputCost = matBase * (1 - RRR.bonusCity) + fee;
         const net = (outP.sellMin - 1) * (1 - feeRate) - inputCost;
         if (net <= 0) continue;
         const roi = net / inputCost;
-        if (!best || roi > best.roi) best = { tier: t, ench: e, net, roi, inputCost, sellPrice: outP.sellMin, rawPrice: raw.sellMin, rawCount: inp.raw };
+        // Same batch WITH focus (higher return rate): shown as an upside, not used for ranking (focus is limited/day).
+        const netFocus = (outP.sellMin - 1) * (1 - feeRate) - (matBase * (1 - RRR.bonusCityFocus) + fee);
+        if (!best || roi > best.roi) best = { tier: t, ench: e, net, roi, inputCost, sellPrice: outP.sellMin, rawPrice: raw.sellMin, rawCount: inp.raw, netFocus };
       }
     }
     if (!best) continue;
@@ -210,7 +214,7 @@ async function scanRefining() {
         resource: RESOURCES[res].rawEs, city, tier: best.tier, ench: best.ench,
         product: itemName(refinedId(res, best.tier, best.ench)),
         netUnit: best.net, roi: best.roi, unitsPerBatch, volPerDay: volPerDay ? Math.round(volPerDay) : null,
-        rrr: RRR.bonusCity,
+        rrr: RRR.bonusCity, netUnitFoco: Math.round(best.netFocus), rrrFocus: RRR.bonusCityFocus,
       },
     });
   }
@@ -464,7 +468,7 @@ export function templateNarration(plan, targetSilver) {
     L.push(`4. Beneficio ~${plan.effProfit.toLocaleString('es')} por viaje. Las órdenes se recargan con la actividad PvE: ~${plan.cyclesPerDay} viajes/día.`);
   } else if (plan.kind === 'refine') {
     L.push(`1. En **${d.city}** (bono de ${d.resource.toLowerCase()}), compra materia prima para ~${d.unitsPerBatch} uds de ${d.product}.`);
-    L.push(`2. Refina con el bono de ciudad (retorno ${(d.rrr * 100).toFixed(1)}%; con foco sería aún mejor).`);
+    L.push(`2. Refina con el bono de ciudad (retorno ${(d.rrr * 100).toFixed(1)}%)${d.netUnitFoco && d.netUnitFoco > d.netUnit ? `. **Con foco** el retorno sube a ${(d.rrrFocus * 100).toFixed(0)}% y ganás ~${d.netUnitFoco.toLocaleString('es')}/ud (en vez de ${d.netUnit.toLocaleString('es')}) — usalo acá si lo tenés` : ''}.`);
     L.push(`3. Lista el producto con orden de venta en la misma ciudad.`);
     L.push(`4. Beneficio ~${plan.effProfit.toLocaleString('es')} por tanda (~${d.netUnit.toLocaleString('es')}/ud). Repite ${plan.cycles} tandas (~${plan.cyclesPerDay}/día).`);
   } else if (plan.kind === 'cityflip') {

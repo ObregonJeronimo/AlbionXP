@@ -6,6 +6,15 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
+## [0.1.8] — 2026-07-07
+### Pulido de métodos (más claro para actuar)
+- **Refinado**: fila "Recomendado hoy" que elige por vos el mejor producto y te dice
+  si conviene gastar foco (deja de abrumar con 20 filas).
+- El **Plan** ahora modela el refinado **con foco** (retorno ~54%): te muestra cuánto
+  más ganás si lo usás, sin cambiar el ranking (el foco es limitado).
+- **Sniper**: etiqueta de **liquidez** (líquido / medio / ilíquido) en cada ganga —
+  un descuento enorme en un item que nadie compra es una trampa, no una oportunidad.
+
 ## [0.1.7] — 2026-07-07
 ### Onboarding y claridad para principiantes
 - **"Empezá acá" en el Dashboard**: la primera pantalla ahora invita a generar tu

@@ -135,7 +135,19 @@ async function run(container) {
     rows.sort((a, b) => b.noFocus.roi - a.noFocus.roi);
     const R = RESOURCES[res];
 
+    // "Recomendado hoy": la fila con mejor beneficio (sin/con foco), para que el novato
+    // no tenga que interpretar 20 filas y sepa exactamente qué refinar.
+    const bestRow = rows.reduce((a, b) => (Math.max(b.noFocus.net, b.focus.net) > Math.max(a.noFocus.net, a.focus.net) ? b : a));
+    const recCard = (bestRow.noFocus.net > 0 || bestRow.focus.net > 0) ? `
+      <div class="card" style="border-color:var(--accent)">
+        <h3>Recomendado hoy</h3>
+        <p style="font-size:14px;line-height:1.6">Lo que más rinde ahora: refinar <b>${escapeHtml(itemName(bestRow.outId))}</b>${isBonusCity ? '' : ` — pero hacelo en <b>${REFINE_BONUS_CITY[res]}</b> (la ciudad con bono), no en ${escapeHtml(city)}`}.
+          ${bestRow.noFocus.net > 0 ? `Ganás <b class="pos">${fmt(bestRow.noFocus.net)}/ud</b> (${fmtPct(bestRow.noFocus.roi, 0)} ROI) sin foco` : 'Sin foco no es rentable'}${bestRow.focus.net > bestRow.noFocus.net ? `, o <b class="pos">${fmt(bestRow.focus.net)}/ud</b> (${fmtPct(bestRow.focus.roi, 0)}) con foco.` : '.'}
+          ${bestRow.focus.net > Math.max(0, bestRow.noFocus.net) * 1.3 ? ' <b>El foco casi lo duplica: si lo tenés, gastalo en este.</b>' : ''}</p>
+      </div>` : '';
+
     results.innerHTML = `
+      ${recCard}
       <div class="card">
         <h3>${R.rawEs} → ${R.refinedEs} en ${escapeHtml(city)} ${isBonusCity ? '★ (ciudad con bono)' : `(sin bono — el bono está en ${REFINE_BONUS_CITY[res]})`}</h3>
         <div class="table-wrap">

@@ -11,6 +11,14 @@ function universe(tier) {
   return gearUniverse([tier], [0]);
 }
 
+// Liquidity cue: how safely a "deal" can actually be resold given its daily volume.
+// A huge discount on an item nobody buys is a trap, not a bargain.
+function liqBadge(vol) {
+  if (vol >= 20) return '<span class="badge safe">líquido</span>';
+  if (vol >= 5) return '<span class="badge diff-2">medio</span>';
+  return '<span class="badge risk">ilíquido</span>';
+}
+
 export function renderSniper(container) {
   container.innerHTML = `
     <h1 class="view-title">🎯 Sniper de gangas</h1>
@@ -117,14 +125,15 @@ async function run(container) {
                 <td>${fmt(d.avg)}</td>
                 <td class="pos">${fmtPct(d.disc, 0)}</td>
                 <td class="pos">${fmt(d.net)}</td>
-                <td>${fmt(d.vol)}</td>
+                <td>${fmt(d.vol)} ${liqBadge(d.vol)}</td>
                 <td>${ageBadge(dataAge(d.date))}</td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
-        <p class="hint">"Beneficio relist" = vender a la media de 7 días menos impuestos. Cuidado con volúmenes bajos:
-          si se venden 2 al día, puedes tardar días en recolocarlo. Un descuento enorme en un item ilíquido no es ganga, es trampa.</p>
+        <p class="hint">"Beneficio relist" = vender a la media de 7 días menos impuestos. La etiqueta de <b>liquidez</b>
+          (líquido ≥20/día · medio 5–20 · <span class="neg">ilíquido &lt;5</span>) te dice si de verdad vas a poder revenderlo:
+          un descuento enorme en un item ilíquido no es ganga, es trampa (tardás días en recolocarlo).</p>
       </div>`;
   } catch (e) {
     results.innerHTML = `<div class="error-box">Error: ${escapeHtml(e.message)}</div>`;
