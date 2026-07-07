@@ -28,7 +28,9 @@ const ALLOWED_HOSTS = [
   /^api\.groq\.com$/,                 // optional AI
   /^openrouter\.ai$/,                 // optional AI
   /^ollama\.com$/,                    // Ollama installer
-  /(^|\.)workers\.dev$/,              // backend/analytics worker (Cloudflare)
+  // Solo NUESTRO worker (prefijo "albion"), no cualquier *.workers.dev: si algún
+  // día hubiera un XSS, no podría exfiltrar el idToken a un worker atacante.
+  /^albion[a-z0-9-]*\.[a-z0-9-]+\.workers\.dev$/i, // backend/analytics worker (Cloudflare)
   /^(127\.0\.0\.1|localhost)$/,       // local Ollama server
 ];
 function hostAllowed(urlStr) {
@@ -60,11 +62,21 @@ async function fetchJson(url, timeoutMs = 25000, headers = {}) {
 async function fetchCachedText(key, url, maxAgeDays = 7) {
   ensureDir(CACHE_DIR());
   const file = path.join(CACHE_DIR(), key);
+  // These caches are JSON: a truncated/corrupt file (interrupted download) must
+  // never be served — it would crash the boot (loadItemIndex). Validate before use.
+  const looksJson = /\.json$/i.test(key);
+  const valid = (t) => {
+    if (!t) return false;
+    if (!looksJson) return true;
+    try { JSON.parse(t); return true; } catch (_) { return false; }
+  };
   try {
     const st = fs.statSync(file);
     const ageMs = Date.now() - st.mtimeMs;
     if (ageMs < maxAgeDays * 24 * 3600 * 1000) {
-      return { ok: true, fromCache: true, data: fs.readFileSync(file, 'utf8') };
+      const cached = fs.readFileSync(file, 'utf8');
+      if (valid(cached)) return { ok: true, fromCache: true, data: cached };
+      // corrupt/truncated cache → ignore and re-download below
     }
   } catch (_) { /* no cache yet */ }
 
@@ -72,13 +84,21 @@ async function fetchCachedText(key, url, maxAgeDays = 7) {
     const res = await fetch(url, { headers: { 'User-Agent': 'AlbionSilverHub/0.1' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
-    fs.writeFileSync(file, text, 'utf8');
+    if (!valid(text)) throw new Error('respuesta inválida (no es JSON)');
+    // Atomic write: write to .tmp then rename, so an interrupted download can
+    // never leave a half-written file at the real path.
+    const tmp = file + '.tmp';
+    fs.writeFileSync(tmp, text, 'utf8');
+    fs.renameSync(tmp, file);
     return { ok: true, fromCache: false, data: text };
   } catch (e) {
-    // Network failed: fall back to stale cache if it exists
-    if (fs.existsSync(file)) {
-      return { ok: true, fromCache: true, stale: true, data: fs.readFileSync(file, 'utf8') };
-    }
+    // Network failed: fall back to stale cache only if it's valid
+    try {
+      if (fs.existsSync(file)) {
+        const cached = fs.readFileSync(file, 'utf8');
+        if (valid(cached)) return { ok: true, fromCache: true, stale: true, data: cached };
+      }
+    } catch (_) { /* ignore */ }
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
 }

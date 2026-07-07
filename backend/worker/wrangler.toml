@@ -1,8 +1,21 @@
 # Config de despliegue del worker de pagos (Cloudflare Wrangler).
 # Deploy: npx wrangler deploy  (desde backend/worker, tras `npx wrangler login`)
+# IMPORTANTE: el nombre DEBE empezar por "albion" (la app solo permite hablar con
+# hosts albion*.workers.dev por seguridad). Si lo renombrás sin ese prefijo, la app
+# dejará de poder llamar al worker (analítica/pagos).
 name = "albion-pagos"
 main = "worker.js"
 compatibility_date = "2026-01-01"
+
+# Rate-limit nativo de Workers (GRATIS, funciona en *.workers.dev — a diferencia de
+# la Cache API). Limita /beat, /hit y /ads/track por IP para que un flujo abusivo no
+# pueda drenar la cuota de escrituras de Firestore (compartida con el foro).
+# limit=2 cada 60s por (endpoint+IP): un cliente legítimo late 1 vez/5min, muy por debajo.
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "2001"
+simple = { limit = 2, period = 60 }
 
 # Variables NO secretas (las secretas van con `npx wrangler secret put NOMBRE`):
 #   MP_ACCESS_TOKEN  (secret) — token de producción de Mercado Pago

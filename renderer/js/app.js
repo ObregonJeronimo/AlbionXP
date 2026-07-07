@@ -35,7 +35,9 @@ async function startHeartbeat(analyticsUrl) {
   }
   const beat = () => { window.albion.postJson(url, { sid }).catch(() => {}); };
   beat();
-  setInterval(beat, 60000);
+  // Cada 5 min (no 60s): 5x menos escrituras en el backend. Para "online ahora"
+  // una resolución de 5 min sobra, y evita agotar la cuota gratuita a escala.
+  setInterval(beat, 300000);
 }
 
 // Community links (web / forum / donate) — open in the browser.

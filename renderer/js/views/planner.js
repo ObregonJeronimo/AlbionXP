@@ -155,7 +155,7 @@ function wireProgress(container) {
   const bar = container.querySelector('#pln-ai-bar');
   const txt = container.querySelector('#pln-ai-progress-txt');
   return window.albion.onOllamaProgress((p) => {
-    if (!bar || !txt) return;
+    if (!bar || !txt || !bar.isConnected) return; // el usuario navegó fuera de Planner
     if (p.phase === 'download') { txt.textContent = `Descargando instalador de Ollama… ${p.pct ?? 0}%`; bar.style.width = (p.pct ?? 0) + '%'; }
     else if (p.phase === 'install') { txt.textContent = 'Instalando Ollama (silencioso)…'; bar.style.width = '100%'; }
     else if (p.phase === 'start') { txt.textContent = 'Arrancando el servidor de IA…'; }
@@ -172,12 +172,16 @@ async function installOllama(container) {
   try {
     status.textContent = 'Instalando Ollama…';
     const res = await window.albion.ollamaInstall();
+    if (!status.isConnected) { unsub(); return; } // el usuario salió de Planner mientras descargaba
     if (!res.ok) throw new Error(res.error || 'instalación fallida');
     status.textContent = 'Ollama instalado — descargando el modelo…';
     const pull = await window.albion.ollamaPull(DEFAULT_MODEL);
+    if (!status.isConnected) { unsub(); return; }
     if (!pull.ok) throw new Error(pull.error || 'descarga del modelo fallida');
   } catch (e) {
-    container.querySelector('#pln-ai-progress-txt').textContent = '';
+    if (!status.isConnected) { unsub(); return; }
+    const txtEl = container.querySelector('#pln-ai-progress-txt');
+    if (txtEl) txtEl.textContent = '';
     status.innerHTML = `<span class="neg">Error: ${escapeHtml(String(e.message))}</span> — puedes instalarlo a mano desde <b>ollama.com</b> y pulsar Reintentar.`;
     actions.innerHTML = `<button class="btn secondary" id="pln-fix-retry2">${icon('refresh', 15)} Reintentar diagnóstico</button>`;
     actions.querySelector('#pln-fix-retry2').addEventListener('click', () => refreshAIStatus(container));
@@ -197,8 +201,10 @@ async function pullModel(container) {
   try {
     status.textContent = `Descargando ${DEFAULT_MODEL}…`;
     const pull = await window.albion.ollamaPull(DEFAULT_MODEL);
+    if (!status.isConnected) { unsub(); return; } // el usuario salió de Planner
     if (!pull.ok) throw new Error(pull.error || 'descarga fallida');
   } catch (e) {
+    if (!status.isConnected) { unsub(); return; }
     status.innerHTML = `<span class="neg">Error descargando el modelo: ${escapeHtml(String(e.message))}</span> — comprueba tu conexión y reintenta.`;
     actions.innerHTML = `<button class="btn secondary" id="pln-fix-retry3">${icon('refresh', 15)} Reintentar</button>`;
     actions.querySelector('#pln-fix-retry3').addEventListener('click', () => refreshAIStatus(container));

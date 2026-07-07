@@ -6,6 +6,30 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
+## [0.1.5] — 2026-07-07
+### Seguridad y anti-abuso (auditoría previa a distribución)
+- **Moderación del foro**: los dueños pueden borrar cualquier post o comentario
+  abusivo/ilegal (validado en las reglas de Firestore, no solo en la app).
+- **Reglas de Firestore endurecidas**: lista blanca de campos, límite de tamaño del
+  apodo y `createdAt` no falsificable (ya no se puede fijar un tema arriba para siempre).
+- **Backend anti-abuso**: rate-limit por IP nativo de Cloudflare en `/beat`, `/hit` y
+  `/ads/track` (un flujo abusivo ya no puede agotar la cuota compartida con el foro);
+  presencia identificada por hash de IP (no inflable); `/ads/track` atómico (sin
+  condiciones de carrera). El panel admin falla cerrado si el email no está verificado.
+- **App**: lista blanca de red más estricta para el worker (no cualquier `*.workers.dev`).
+### Escala
+- Latido de presencia cada 5 min (antes 60 s): 5× menos escrituras; ventana "online"
+  del panel alineada a 6 min.
+### Robustez
+- Caché de items **atómica** (una descarga interrumpida ya no corrompe el arranque).
+- Reintento automático ante saturación (429) de la API de datos; mensaje claro.
+- Estado vacío en Oro; guard al salir de una vista durante la instalación de la IA;
+  volumen del Sniper calculado sobre los días reales con datos.
+### Correctitud y distribución
+- **Premium = desactivado por defecto** (default conservador: no sobreestima ganancias).
+- **Política de privacidad y términos** (`/privacidad.html`) enlazada desde la web, y
+  aviso de instalación (Windows "editor desconocido") en la sección de descarga.
+
 ## [0.1.4] — 2026-07-06
 ### Arreglos (QA)
 - Planner sin emojis (iconos propios en estado de IA, tarjetas de plan y botones).

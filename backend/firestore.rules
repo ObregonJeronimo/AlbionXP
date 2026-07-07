@@ -9,27 +9,56 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.email_verified == true;
     }
 
+    // Dueños del proyecto: pueden MODERAR (borrar cualquier post/comentario
+    // abusivo o ilegal). Vive en el servidor: un externo no lo puede saltear.
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email in ['jeroobregon03@gmail.com', 'thiagowendler53@gmail.com'];
+    }
+
+    // createdAt no puede venir del futuro (1 h de tolerancia por relojes desajustados):
+    // impide fijar un post arriba del foro para siempre poniendo una fecha lejana,
+    // sin rechazar a usuarios con la hora del PC ligeramente adelantada.
+    function freshCreatedAt() {
+      return request.resource.data.createdAt is timestamp
+        && request.resource.data.createdAt < request.time + duration.value(1, 'h');
+    }
+
     match /posts/{postId} {
       allow read: if true;
       allow create: if verified()
+        && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'title', 'body', 'createdAt'])
         && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() <= 40
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 1
         && request.resource.data.title.size() <= 140
         && request.resource.data.body is string
-        && request.resource.data.body.size() <= 5000;
-      allow update, delete: if request.auth != null
+        && request.resource.data.body.size() <= 5000
+        && freshCreatedAt();
+      allow update: if request.auth != null
         && resource.data.authorUid == request.auth.uid;
+      // Borra el autor, o un dueño (moderación).
+      allow delete: if request.auth != null
+        && (resource.data.authorUid == request.auth.uid || isOwner());
 
       match /comments/{commentId} {
         allow read: if true;
         allow create: if verified()
+          && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'body', 'createdAt'])
           && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 40
           && request.resource.data.body is string
           && request.resource.data.body.size() >= 1
-          && request.resource.data.body.size() <= 2000;
-        allow update, delete: if request.auth != null
+          && request.resource.data.body.size() <= 2000
+          && freshCreatedAt();
+        allow update: if request.auth != null
           && resource.data.authorUid == request.auth.uid;
+        // Borra el autor, o un dueño (moderación).
+        allow delete: if request.auth != null
+          && (resource.data.authorUid == request.auth.uid || isOwner());
       }
 
       match /votes/{voterUid} {

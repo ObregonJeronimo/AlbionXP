@@ -1,7 +1,7 @@
 // In-app community forum. Reading is public; posting/commenting/voting needs a
 // Firebase login (email + password). Login is inline — it never blocks the app.
 import {
-  listPostsCached as listPosts, getPost, createPost, deletePost,
+  listPostsCached as listPosts, getPost, createPost, deletePost, deleteComment,
   listComments, addComment, getVotes, setVote, clearVote,
 } from '../forumdb.js';
 import {
@@ -12,6 +12,12 @@ import { escapeHtml } from '../state.js';
 
 // Only verified accounts can post/comment/vote (anti-spam).
 function canParticipate() { return Boolean(session.uid && session.emailVerified); }
+
+// Dueños del proyecto: pueden moderar (borrar cualquier post/comentario abusivo o
+// ilegal). El chequeo REAL está en las reglas de Firestore (por email); esto solo
+// muestra el botón. Un externo que edite esto no gana nada: el server lo rechaza.
+const OWNERS = ['jeroobregon03@gmail.com', 'thiagowendler53@gmail.com'];
+function isOwner() { return Boolean(session.email && OWNERS.includes(session.email.toLowerCase())); }
 
 function when(iso) {
   if (!iso) return '';
@@ -196,7 +202,7 @@ async function showDetail(container, id) {
   body.innerHTML = `<div class="loading"><span class="spinner"></span>Cargando tema…</div>`;
   try {
     const [post, comments, votes] = await Promise.all([getPost(id), listComments(id), getVotes(id)]);
-    const canDelete = session.uid && session.uid === post.authorUid;
+    const canDelete = session.uid && (session.uid === post.authorUid || isOwner());
 
     body.innerHTML = `
       <button class="btn secondary" id="fd-back" style="margin-bottom:12px">‹ Volver a los temas</button>
@@ -219,11 +225,14 @@ async function showDetail(container, id) {
       <div class="card">
         <h3>${comments.length} comentario(s)</h3>
         <div id="fd-comments">
-          ${comments.map(c => `
-            <div class="comment">
-              <div class="comment-meta">${escapeHtml(c.authorName || 'anónimo')} · ${when(c.createdAt)}</div>
+          ${comments.map(c => {
+            const canDelC = session.uid && (session.uid === c.authorUid || isOwner());
+            return `
+            <div class="comment" data-cid="${escapeHtml(c._id)}">
+              <div class="comment-meta">${escapeHtml(c.authorName || 'anónimo')} · ${when(c.createdAt)}${canDelC ? ' · <a class="fd-cdel" style="color:var(--red);cursor:pointer">borrar</a>' : ''}</div>
               <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.5">${escapeHtml(c.body || '')}</div>
-            </div>`).join('') || '<p class="hint">Sé el primero en comentar.</p>'}
+            </div>`;
+          }).join('') || '<p class="hint">Sé el primero en comentar.</p>'}
         </div>
         ${canParticipate() ? `
           <div style="margin-top:12px">
@@ -239,6 +248,14 @@ async function showDetail(container, id) {
       await deletePost(id).catch(() => {});
       showList(container);
     });
+    // Borrado de comentarios (autor o dueño para moderar)
+    body.querySelectorAll('.comment .fd-cdel').forEach(a =>
+      a.addEventListener('click', async () => {
+        const cid = a.closest('.comment')?.dataset.cid;
+        if (!cid || !confirm('¿Borrar este comentario?')) return;
+        try { await deleteComment(id, cid); } catch (err) { alert(String(err.message)); return; }
+        showDetail(container, id);
+      }));
 
     // Voting
     const scoreEl = body.querySelector('#fd-score');

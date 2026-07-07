@@ -168,45 +168,51 @@ function ads(env) {
 
 // ---------- /ads/track ----------
 async function adsTrack(request, env) {
+  if (await tooFrequent(request, env, 'adstrack')) return json({ ok: true, throttled: true });
   const { batch } = await request.json().catch(() => ({}));
   if (!Array.isArray(batch) || !batch.length) return json({ ok: true, ignored: true });
 
   const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
   const day = new Date().toISOString().slice(0, 10);
+  const base = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
+  // Acumular por doc (id+dia): Firestore rechaza el commit entero si dos writes tocan
+  // el MISMO doc, y un batch adversario podria repetir el id a proposito.
+  const acc = new Map();
   for (const item of batch.slice(0, 20)) {
     const id = String(item.id || '').replace(/[^\w-]/g, '').slice(0, 60);
     if (!id) continue;
-    const docPath = `adStats/${id}_${day}`;
-    const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}` +
-      `/databases/(default)/documents/${docPath}`;
-
-    // Read-modify-write: precisión suficiente para métricas de anuncios
-    let cur = { views: 0, seconds: 0, clicks: 0 };
-    const g = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (g.ok) {
-      const f = (await g.json()).fields || {};
-      cur = {
-        views: Number(f.views?.integerValue || 0),
-        seconds: Number(f.seconds?.integerValue || 0),
-        clicks: Number(f.clicks?.integerValue || 0),
-      };
-    }
-    const next = {
-      fields: {
-        adId: { stringValue: id },
-        day: { stringValue: day },
-        views: { integerValue: String(cur.views + Math.max(0, Number(item.views) || 0)) },
-        seconds: { integerValue: String(cur.seconds + Math.max(0, Number(item.seconds) || 0)) },
-        clicks: { integerValue: String(cur.clicks + Math.max(0, Number(item.clicks) || 0)) },
-      },
-    };
-    await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(next),
+    // El cliente NO es de fiar: re-clampeamos cada valor en el servidor.
+    const views = Math.min(10, Math.max(0, Math.floor(Number(item.views) || 0)));
+    const seconds = Math.min(600, Math.max(0, Math.floor(Number(item.seconds) || 0)));
+    const clicks = Math.min(10, Math.max(0, Math.floor(Number(item.clicks) || 0)));
+    if (!views && !seconds && !clicks) continue;
+    const cur = acc.get(id) || { views: 0, seconds: 0, clicks: 0 };
+    cur.views += views; cur.seconds += seconds; cur.clicks += clicks;
+    acc.set(id, cur);
+  }
+  const writes = [];
+  for (const [id, v] of acc) {
+    // Tope por doc por flush (por si un batch adversario repite el id muchas veces).
+    const views = Math.min(60, v.views), seconds = Math.min(1800, v.seconds), clicks = Math.min(60, v.clicks);
+    // update + updateTransforms: crea el doc si no existe y aplica los increments
+    // de forma atomica (1 escritura, sin lectura previa: sin races y mitad de ops).
+    writes.push({
+      update: { name: `${base}/adStats/${id}_${day}`, fields: { adId: { stringValue: id }, day: { stringValue: day } } },
+      updateMask: { fieldPaths: ['adId', 'day'] },
+      updateTransforms: [
+        { fieldPath: 'views', increment: { integerValue: String(views) } },
+        { fieldPath: 'seconds', increment: { integerValue: String(seconds) } },
+        { fieldPath: 'clicks', increment: { integerValue: String(clicks) } },
+      ],
     });
   }
+  if (!writes.length) return json({ ok: true });
+  await fetch(`https://firestore.googleapis.com/v1/${base}:commit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ writes }),
+  });
   return json({ ok: true });
 }
 
@@ -214,9 +220,14 @@ async function adsTrack(request, env) {
 // La app manda un "latido" cada ~60s con un id anónimo. Un usuario está "online"
 // si latió en los últimos 120s. Guardamos presence/{sid} = { t }.
 async function beat(request, env) {
-  const { sid } = await request.json().catch(() => ({}));
-  const id = String(sid || '').replace(/[^\w-]/g, '').slice(0, 40);
-  if (!id) return json({ ok: false });
+  // Rate-limit por IP: los clientes legitimos laten cada 5 min, asi que nunca los
+  // frena; pero un atacante no puede drenar la cuota de escrituras de Firestore.
+  if (await tooFrequent(request, env, 'beat')) return json({ ok: true });
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  // Presencia identificada por un HASH de la IP (no por un sid del cliente): la
+  // coleccion queda acotada a IPs distintas (no se puede inflar con ids aleatorios)
+  // y "online" cuenta IPs activas, no documentos falsos.
+  const id = (await sha256hex(ip)).slice(0, 24) || 'anon';
   const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
   const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/presence/${id}`;
   await fetch(url, {
@@ -229,22 +240,25 @@ async function beat(request, env) {
 
 // ---------- Analítica: visitas web ----------
 async function hit(request, env) {
-  const body = await request.json().catch(() => ({}));
-  const day = new Date().toISOString().slice(0, 10);
+  // Rate-limit por IP: protege el unico doc stats/counters del hotspot (~1 escritura/seg)
+  // y de que agoten la cuota de escrituras.
+  if (await tooFrequent(request, env, 'hit')) return json({ ok: true, deduped: true });
+  const day = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
   const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
-  const doc = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/stats/counters`;
-  await fetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:commit`, {
+  const base = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+  // update + updateTransforms: crea el doc si no existe (updateMask solo toca
+  // 'updatedAt', no pisa los contadores) y aplica los increments de forma atomica.
+  await fetch(`https://firestore.googleapis.com/v1/${base}:commit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({
       writes: [{
-        transform: {
-          document: doc,
-          fieldTransforms: [
-            { fieldPath: 'visitsTotal', increment: { integerValue: '1' } },
-            { fieldPath: `visits_${day.replace(/-/g, '_')}`, increment: { integerValue: '1' } },
-          ],
-        },
+        update: { name: `${base}/stats/counters`, fields: { updatedAt: { integerValue: String(Date.now()) } } },
+        updateMask: { fieldPaths: ['updatedAt'] },
+        updateTransforms: [
+          { fieldPath: 'visitsTotal', increment: { integerValue: '1' } },
+          { fieldPath: `visits_${day}`, increment: { integerValue: '1' } },
+        ],
       }],
     }),
   });
@@ -268,7 +282,8 @@ async function isOwner(request, url, env) {
       if (r.ok) {
         const u = (await r.json()).users?.[0];
         const email = (u?.email || '').toLowerCase();
-        if (u && u.emailVerified !== false && allow.includes(email)) return true;
+        // === true (no "!== false"): si el campo faltara, NO debe autorizar (falla cerrado).
+        if (u && u.emailVerified === true && allow.includes(email)) return true;
       }
     } catch (_) { /* denegar */ }
   }
@@ -287,7 +302,9 @@ async function adminStats(request, url, env) {
   try {
     const r = await fetch(`${base}/presence?pageSize=1000`, { headers: { Authorization: `Bearer ${token}` } });
     const docs = (await r.json()).documents || [];
-    const cutoff = Date.now() - 120000;
+    // Ventana de 6 min: >= 2x el intervalo de latido de la app (5 min), para que un
+    // usuario activo caiga siempre dentro aunque pierda un latido.
+    const cutoff = Date.now() - 360000;
     const stale = [];
     for (const d of docs) {
       const t = Number(d.fields?.t?.integerValue || 0);
@@ -399,6 +416,29 @@ async function hmacHex(secret, msg) {
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ---------- Rate-limit por IP con el binding NATIVO de Workers ----------
+// Usa el binding RATE_LIMITER (definido en wrangler.toml). A diferencia de la Cache
+// API, ESTE si funciona en *.workers.dev. Limita /beat, /hit y /ads/track por IP para
+// que un flujo abusivo no pueda drenar la cuota de escrituras de Firestore (que
+// comparte con el foro). Si el binding no esta configurado, no bloquea (el worker
+// sigue andando, solo sin limite) — asi un deploy sin el binding no se rompe.
+async function tooFrequent(request, env, keyName) {
+  const rl = env && env.RATE_LIMITER;
+  if (!rl || typeof rl.limit !== 'function') return false;
+  try {
+    const ip = request.headers.get('CF-Connecting-IP') || '0';
+    const { success } = await rl.limit({ key: `${keyName}:${ip}` });
+    return !success;
+  } catch (_) {
+    return false; // ante cualquier error del limitador, no bloqueamos trafico legitimo
+  }
+}
+
+async function sha256hex(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s)));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function b64url(s) { return b64urlBytes(new TextEncoder().encode(s)); }

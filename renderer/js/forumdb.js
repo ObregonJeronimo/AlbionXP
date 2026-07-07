@@ -56,7 +56,8 @@ function invalidate(prefix) {
 }
 
 function authorName() {
-  return session.displayName || (session.email ? session.email.split('@')[0] : 'anónimo');
+  const n = session.displayName || (session.email ? session.email.split('@')[0] : 'anónimo');
+  return String(n).slice(0, 40); // las reglas de Firestore exigen <=40: evita rechazos
 }
 
 // ---------- Posts ----------
@@ -117,6 +118,14 @@ export async function addComment(postId, body) {
   if (!res.ok) throw new Error(res.data?.error?.message || 'No se pudo comentar.');
   invalidate('comments:' + postId);
   return unwrap(res.data);
+}
+
+// Borrar comentario (autor, o dueño para moderar — validado por las reglas Firestore).
+export async function deleteComment(postId, commentId) {
+  const headers = await authHeaders();
+  const res = await window.albion.request('DELETE', `${BASE()}/posts/${postId}/comments/${commentId}?key=${KEY()}`, null, headers);
+  if (!res.ok) throw new Error(res.data?.error?.message || 'No se pudo borrar el comentario.');
+  invalidate('comments:' + postId);
 }
 
 // ---------- Votes (doc id = voter uid → no double voting, no counters to hack) ----------

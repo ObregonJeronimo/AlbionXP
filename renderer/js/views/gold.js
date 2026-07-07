@@ -29,6 +29,12 @@ async function load(container) {
   const signalEl = container.querySelector('#gold-signal');
   try {
     const raw = await getGold(24 * 14);
+    if (!Array.isArray(raw) || raw.length === 0) {
+      statsEl.innerHTML = '';
+      signalEl.className = '';
+      signalEl.innerHTML = '<p class="hint">Sin datos de oro para este servidor ahora mismo. Probá con otro servidor o volvé en un rato (los precios los aporta la comunidad).</p>';
+      return;
+    }
     // API returns most-recent-first; chart wants chronological
     const points = [...raw].reverse();
     const prices = points.map(p => p.price);

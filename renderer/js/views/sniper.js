@@ -85,7 +85,10 @@ async function run(container) {
         // Profit: buy now, relist at avg with sell-order fees
         const net = avg * (1 - sellOrderFees(state.premium)) - p.sellMin;
         if (net <= 0) continue;
-        deals.push({ itemId, quality: p.quality, price: p.sellMin, avg, disc, net, vol: totCount / 7, date: p.sellMinDate });
+        // Volumen/día sobre los días REALES con datos (no /7 fijo): si el histórico
+        // trae menos días, /7 subestimaría el volumen y ocultaría la iliquidez.
+        const days = Math.max(1, series.data.length);
+        deals.push({ itemId, quality: p.quality, price: p.sellMin, avg, disc, net, vol: totCount / days, date: p.sellMinDate });
       }
     }
 

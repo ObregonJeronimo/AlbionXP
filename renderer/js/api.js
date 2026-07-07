@@ -36,10 +36,28 @@ const CACHE_TTL_MS = 90 * 1000;
 async function cachedGet(url) {
   const hit = cache.get(url);
   if (hit && Date.now() - hit.t < CACHE_TTL_MS) return hit.v;
-  const res = await throttledFetch(url);
+  let res = await throttledFetch(url);
+  if (!res.ok && res.status === 429) {
+    // AODP saturado (100 req/min): esperamos y reintentamos una vez antes de rendirnos.
+    await new Promise(r => setTimeout(r, 4000));
+    res = await throttledFetch(url);
+    if (!res.ok && res.status === 429) {
+      throw new Error('El servidor de datos de la comunidad está saturado ahora mismo. Esperá un minuto y volvé a intentar.');
+    }
+  }
   if (!res.ok) throw new Error(res.error || `HTTP ${res.status}`);
-  cache.set(url, { t: Date.now(), v: res.data });
+  setCache(url, res.data);
   return res.data;
+}
+
+// Bound the cache so a long session can't grow it without limit (fuga de memoria lenta).
+function setCache(url, data) {
+  if (cache.size >= 300) {
+    const now = Date.now();
+    for (const [k, v] of cache) if (now - v.t >= CACHE_TTL_MS) cache.delete(k);
+    if (cache.size >= 300) cache.delete(cache.keys().next().value); // evict oldest insertion
+  }
+  cache.set(url, { t: Date.now(), v: data });
 }
 
 const NO_DATE = '0001-01-01';

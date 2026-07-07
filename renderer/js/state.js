@@ -1,7 +1,7 @@
 // Global app state + settings persistence via main process.
 export const state = {
   server: 'west',      // west | europe | east
-  premium: true,       // affects sales tax 4% vs 8%
+  premium: false,      // affects sales tax 4% vs 8%. Default conservador (peor caso 8%): no sobreestima ganancias hasta que el usuario confirme que tiene Premium.
   maxDataAgeMin: 60,   // global data-freshness window (minutes) for scanners/planner
   groqKey: '',         // optional AI provider keys (empty = skipped in the chain)
   openrouterKey: '',
