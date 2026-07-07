@@ -69,5 +69,17 @@ service cloud.firestore {
         allow delete: if request.auth != null && request.auth.uid == voterUid;
       }
     }
+
+    // Métricas del panel de admin. Solo los DUEÑOS pueden leerlas — el panel web
+    // las lee DIRECTO de Firestore con el login de Google, sin worker de por medio.
+    // Cada usuario puede escribir SOLO su propia presencia (presence/{su-uid}).
+    match /presence/{id} {
+      allow read: if isOwner();
+      allow write: if request.auth != null && request.auth.uid == id;
+    }
+    match /stats/{doc} {
+      allow read: if isOwner();
+      // Las visitas web las escribe el worker (si se despliega) o nadie: los clientes no escriben aquí.
+    }
   }
 }
