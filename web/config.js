@@ -7,7 +7,7 @@ window.SITE = {
   donateUrl: 'https://cafecito.app/albionxp',
   contactEmail: 'jeroobregon03@gmail.com',
   // URL del worker de analítica (se rellena tras desplegar el worker). Vacío = sin conteo de visitas.
-  analyticsUrl: '',
+  analyticsUrl: 'https://albion-pagos.albionxp.workers.dev',
 };
 
 // Beacon de visita (cuenta visitas para el panel de admin). No bloquea nada.

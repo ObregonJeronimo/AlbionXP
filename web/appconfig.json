@@ -3,7 +3,7 @@
     "siteUrl": "https://albion-xp.vercel.app/",
     "donateUrl": "https://cafecito.app/albionxp"
   },
-  "analyticsUrl": "",
+  "analyticsUrl": "https://albion-pagos.albionxp.workers.dev",
   "adFrame": {
     "enabled": true,
     "url": "https://albion-xp.vercel.app/ad-frame.html",
