@@ -135,7 +135,7 @@ async function run(container) {
             <thead><tr>
               <th>Item</th><th>Comprar en</th><th>Precio compra</th>
               <th>Vender en</th><th>Precio venta</th>
-              <th>Beneficio/ud</th><th>ROI</th><th>Beneficio/kg</th><th>Datos</th>
+              <th>Beneficio/unidad</th><th>ROI</th><th>Beneficio/kg</th><th>Datos</th>
             </tr></thead>
             <tbody>
               ${top.map(o => `<tr>

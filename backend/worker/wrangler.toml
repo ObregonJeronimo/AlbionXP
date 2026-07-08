@@ -26,7 +26,7 @@ simple = { limit = 2, period = 60 }
 FIREBASE_API_KEY = "AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU"
 FIREBASE_PROJECT_ID = "albionxp-eef13"
 # ↓ SOLO ESTO tenés que completar: el "client_email" de tu JSON de service account.
-SA_CLIENT_EMAIL = "PEGAR_CLIENT_EMAIL"
+SA_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@albionxp-eef13.iam.gserviceaccount.com"
 GH_REPO = "ObregonJeronimo/AlbionXP"
 # Dueños del panel de admin (login con Google). Si no la ponés, usa la lista
 # que ya está hardcodeada en el worker (thiago + jero). Editá acá para cambiarla.

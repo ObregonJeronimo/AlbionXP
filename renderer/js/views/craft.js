@@ -155,7 +155,7 @@ async function analyzeItem(container, itemId) {
           <div class="stat-card"><div class="stat-label">Materiales</div><div class="stat-value">${fmt(matCost)}</div></div>
           <div class="stat-card"><div class="stat-label">Con retorno ${fmtPct(rrr, 1)}</div><div class="stat-value">${fmt(returnableCost * (1 - rrr) + artifactCost)}</div>${artifactCost ? `<div class="stat-sub">artefacto sin retorno: ${fmt(artifactCost)}</div>` : ''}</div>
           <div class="stat-card"><div class="stat-label">Tarifa estación</div><div class="stat-value">${fmt(craftFee)}</div><div class="stat-sub">valor item ${recipe.itemValue} · ${recipe.focus ? recipe.focus + ' foco' : ''}</div></div>
-          <div class="stat-card"><div class="stat-label">Coste por unidad</div><div class="stat-value gold">${fmt(costPerCraft)}</div>${(recipe.outCount || 1) > 1 ? `<div class="stat-sub">la receta produce ${recipe.outCount} uds/craft</div>` : ''}</div>
+          <div class="stat-card"><div class="stat-label">Coste por unidad</div><div class="stat-value gold">${fmt(costPerCraft)}</div>${(recipe.outCount || 1) > 1 ? `<div class="stat-sub">la receta produce ${recipe.outCount} unidades/craft</div>` : ''}</div>
         </div>
       </div>
 

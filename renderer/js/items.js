@@ -48,12 +48,20 @@ export async function loadItemIndex() {
   return itemIndex.length;
 }
 
+// Etiqueta de tier al estilo de los jugadores: "T4", o "T4.1" para encantamiento 1
+// (t4.1 = tier 4, encantamiento 1). Se saca del id, así funciona hasta en el fallback.
+export function tierTag(id) {
+  const t = parseTier(id);
+  if (!t) return '';
+  const e = parseEnch(id);
+  return e > 0 ? `T${t}.${e}` : `T${t}`;
+}
+
 export function itemName(id) {
-  const e = itemById.get(id);
-  if (e) return e.es;
-  // Fall back: strip @ench for base-name lookup
-  const base = itemById.get(id.replace(/@\d$/, ''));
-  return base ? base.es : id;
+  const e = itemById.get(id) || itemById.get(id.replace(/@\d$/, ''));
+  const base = e ? e.es : id;
+  const tag = tierTag(id);
+  return tag ? `${tag} ${base}` : base;
 }
 
 export function searchItems(query, limit = 30) {
@@ -96,7 +104,7 @@ export function attachItemSearch(inputEl, onPick) {
     sug.innerHTML = items.map((e, i) => `
       <div class="item-sug ${i === sel ? 'sel' : ''}" data-i="${i}">
         <img src="${iconUrl(e.id, 1, 32)}" loading="lazy" alt="" />
-        <span>${e.es}${e.ench ? ` .${e.ench}` : ''}</span>
+        <span>${e.tier ? `T${e.tier}${e.ench ? '.' + e.ench : ''} ` : ''}${e.es}</span>
         <span class="sug-id">${e.id}</span>
       </div>`).join('');
     sug.classList.toggle('open', items.length > 0);

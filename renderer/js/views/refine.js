@@ -142,7 +142,7 @@ async function run(container) {
       <div class="card" style="border-color:var(--accent)">
         <h3>Recomendado hoy</h3>
         <p style="font-size:14px;line-height:1.6">Lo que más rinde ahora: refinar <b>${escapeHtml(itemName(bestRow.outId))}</b>${isBonusCity ? '' : ` — pero hacelo en <b>${REFINE_BONUS_CITY[res]}</b> (la ciudad con bono), no en ${escapeHtml(city)}`}.
-          ${bestRow.noFocus.net > 0 ? `Ganás <b class="pos">${fmt(bestRow.noFocus.net)}/ud</b> (${fmtPct(bestRow.noFocus.roi, 0)} ROI) sin foco` : 'Sin foco no es rentable'}${bestRow.focus.net > bestRow.noFocus.net ? `, o <b class="pos">${fmt(bestRow.focus.net)}/ud</b> (${fmtPct(bestRow.focus.roi, 0)}) con foco.` : '.'}
+          ${bestRow.noFocus.net > 0 ? `Ganás <b class="pos">${fmt(bestRow.noFocus.net)}/unidad</b> (${fmtPct(bestRow.noFocus.roi, 0)} ROI) sin foco` : 'Sin foco no es rentable'}${bestRow.focus.net > bestRow.noFocus.net ? `, o <b class="pos">${fmt(bestRow.focus.net)}/unidad</b> (${fmtPct(bestRow.focus.roi, 0)}) con foco.` : '.'}
           ${bestRow.focus.net > Math.max(0, bestRow.noFocus.net) * 1.3 ? ' <b>El foco casi lo duplica: si lo tenés, gastalo en este.</b>' : ''}</p>
       </div>` : '';
 
@@ -154,8 +154,8 @@ async function run(container) {
           <table class="data">
             <thead><tr>
               <th>Producto</th><th>Materia (${buyMode === 'same' ? 'misma ciudad' : 'más barata'})</th>
-              <th>Coste inputs/ud</th><th>Venta</th>
-              <th>Beneficio/ud</th><th>ROI</th>
+              <th>Coste inputs/unidad</th><th>Venta</th>
+              <th>Beneficio/unidad</th><th>ROI</th>
               <th>Con foco</th><th>ROI foco</th><th>Datos</th>
             </tr></thead>
             <tbody>

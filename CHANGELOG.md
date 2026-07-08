@@ -6,6 +6,12 @@ Todas las novedades de Albion Silver Hub. Formato basado en
 
 El proceso para publicar una versión está en [docs/RELEASE.md](docs/RELEASE.md).
 
+## [0.1.10] — 2026-07-07
+### Claridad
+- **Notación de tier y encantamiento al estilo jugador**: los items ahora se muestran
+  como **T4.1** (tier 4, encantamiento 1) en todo el sistema — tablas, planes, búsqueda.
+- **"ud/uds" → "unidad/unidades"** completo en toda la app (nada de abreviaturas confusas).
+
 ## [0.1.9] — 2026-07-07
 ### Robustez
 - **Instancia única**: la app ya no se puede abrir dos veces a la vez. Si intentás

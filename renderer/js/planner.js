@@ -459,7 +459,7 @@ export function templateNarration(plan, targetSilver) {
     L.push(`2. Transporta a **${d.sellCity}**${d.risky ? ' — ⚠️ ruta con zona roja: ve ligero y evita horas punta' : ' por zonas seguras'}.`);
     L.push(`3. Lista con orden de venta a ~${d.sellPrice.toLocaleString('es')}${d.cappedByAvg ? ' (precio realista según la media reciente del mercado, no el listing más caro)' : ' (1 de plata bajo el mínimo actual)'}.`);
     L.push(`4. Beneficio esperado: ~${plan.effProfit.toLocaleString('es')} por viaje (${(d.roi * 100).toFixed(0)}% ROI). Repite ${plan.cycles} viajes.`);
-    if (d.volPerDay) L.push(`   Volumen real del mercado destino: ~${d.volPerDay.toLocaleString('es')} uds/día — el plan asume capturar solo el 20%.`);
+    if (d.volPerDay) L.push(`   Volumen real del mercado destino: ~${d.volPerDay.toLocaleString('es')} unidades/día — el plan asume capturar solo el 20%.`);
   } else if (plan.kind === 'blackmarket') {
     L.push(`1. Compra esta cesta en sus ciudades (total ~${plan.effCapital.toLocaleString('es')}):`);
     for (const b of d.basket.slice(0, 6)) L.push(`   • ${b.item} (q${b.quality}) en ${b.buyCity} a ${b.buyPrice.toLocaleString('es')} → el MN paga ${b.bmPays.toLocaleString('es')} (+${b.net.toLocaleString('es')})`);
@@ -467,15 +467,15 @@ export function templateNarration(plan, targetSilver) {
     L.push(`3. Vende al instante a las órdenes del Mercado Negro.`);
     L.push(`4. Beneficio ~${plan.effProfit.toLocaleString('es')} por viaje. Las órdenes se recargan con la actividad PvE: ~${plan.cyclesPerDay} viajes/día.`);
   } else if (plan.kind === 'refine') {
-    L.push(`1. En **${d.city}** (bono de ${d.resource.toLowerCase()}), compra materia prima para ~${d.unitsPerBatch} uds de ${d.product}.`);
-    L.push(`2. Refina con el bono de ciudad (retorno ${(d.rrr * 100).toFixed(1)}%)${d.netUnitFoco && d.netUnitFoco > d.netUnit ? `. **Con foco** el retorno sube a ${(d.rrrFocus * 100).toFixed(0)}% y ganás ~${d.netUnitFoco.toLocaleString('es')}/ud (en vez de ${d.netUnit.toLocaleString('es')}) — usalo acá si lo tenés` : ''}.`);
+    L.push(`1. En **${d.city}** (bono de ${d.resource.toLowerCase()}), compra materia prima para ~${d.unitsPerBatch} unidades de ${d.product}.`);
+    L.push(`2. Refina con el bono de ciudad (retorno ${(d.rrr * 100).toFixed(1)}%)${d.netUnitFoco && d.netUnitFoco > d.netUnit ? `. **Con foco** el retorno sube a ${(d.rrrFocus * 100).toFixed(0)}% y ganás ~${d.netUnitFoco.toLocaleString('es')}/unidad (en vez de ${d.netUnit.toLocaleString('es')}) — usalo acá si lo tenés` : ''}.`);
     L.push(`3. Lista el producto con orden de venta en la misma ciudad.`);
-    L.push(`4. Beneficio ~${plan.effProfit.toLocaleString('es')} por tanda (~${d.netUnit.toLocaleString('es')}/ud). Repite ${plan.cycles} tandas (~${plan.cyclesPerDay}/día).`);
+    L.push(`4. Beneficio ~${plan.effProfit.toLocaleString('es')} por tanda (~${d.netUnit.toLocaleString('es')}/unidad). Repite ${plan.cycles} tandas (~${plan.cyclesPerDay}/día).`);
   } else if (plan.kind === 'cityflip') {
     L.push(`1. En **${d.city}** poné una **orden de compra** de ${d.item} a ${d.buy.toLocaleString('es')} (1 más que la mejor compra actual, para ponerte primero en la cola).`);
     L.push(`2. Cuando se te llene, poné una **orden de venta** a ${d.sell.toLocaleString('es')} (1 menos que la venta más barata).`);
     L.push(`3. No viajás ni cruzás zona roja: revisá tus órdenes ~2 veces al día. Es casi AFK.`);
-    L.push(`4. Ganás ~${d.netUnit.toLocaleString('es')}/ud (${(d.roi * 100).toFixed(0)}% ROI). El mercado mueve ~${d.volPerDay.toLocaleString('es')} uds/día, así que tus órdenes rotan.`);
+    L.push(`4. Ganás ~${d.netUnit.toLocaleString('es')}/unidad (${(d.roi * 100).toFixed(0)}% ROI). El mercado mueve ~${d.volPerDay.toLocaleString('es')} unidades/día, así que tus órdenes rotan.`);
   } else if (plan.kind === 'craft') {
     L.push(`1. Craftea esta cesta donde tengas especialización (mirá la vista "Crafteo" para los bonos por ciudad) — coste total ~${plan.effCapital.toLocaleString('es')}:`);
     for (const b of d.basket.slice(0, 6)) L.push(`   • ${b.item}: cuesta ~${b.cost.toLocaleString('es')} → el MN paga ${b.bmPays.toLocaleString('es')} (+${b.net.toLocaleString('es')})`);
@@ -501,7 +501,7 @@ export function templateNarration(plan, targetSilver) {
     L.push('**Consejo:** comprá con **orden de compra** (no a precio instantáneo) si no tenés prisa: ahorrás ~2-4%.');
   }
   if (plan.detail?.volPerDay) {
-    L.push(`**Liquidez:** el mercado mueve ~${plan.detail.volPerDay.toLocaleString('es')} uds/día — si es bajo, tu venta puede tardar; no te sobreexpongas.`);
+    L.push(`**Liquidez:** el mercado mueve ~${plan.detail.volPerDay.toLocaleString('es')} unidades/día — si es bajo, tu venta puede tardar; no te sobreexpongas.`);
   }
   if (plan.detail?.netUnit) L.push(`**Neto por unidad tras impuesto:** ~${plan.detail.netUnit.toLocaleString('es')} de plata.`);
   L.push(`**Si no se vende en ~24h:** bajá el precio un poco o llevalo a otra ciudad — no lo dejes clavado.`);

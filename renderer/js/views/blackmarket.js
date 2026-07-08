@@ -31,7 +31,7 @@ export function renderBlackMarket(container) {
         </select>
       </div>
       <div class="ctrl">
-        <label>Beneficio mínimo/ud</label>
+        <label>Beneficio mínimo/unidad</label>
         <input type="number" id="bm-minprofit" value="5000" min="0" style="width:100px" />
       </div>
       <div class="ctrl">
@@ -125,7 +125,7 @@ async function run(container) {
           <table class="data">
             <thead><tr>
               <th>Item</th><th>Calidad</th><th>Comprar en</th><th>Precio</th>
-              <th>MN paga</th><th>Beneficio/ud</th><th>ROI</th><th>Datos</th>
+              <th>MN paga</th><th>Beneficio/unidad</th><th>ROI</th><th>Datos</th>
             </tr></thead>
             <tbody>
               ${top.map(o => `<tr>

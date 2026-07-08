@@ -60,7 +60,7 @@ function gatherCard(gathering) {
       <p class="hint">¿Estás empezando y no querés arriesgar plata? Este es el camino: andá a zona azul o amarilla (segura),
         recolectá y vendé. Ahora mismo, lo que más plata deja por unidad recolectada:</p>
       <div class="table-wrap"><table class="data">
-        <thead><tr><th>Recurso</th><th>Plata/ud (neto)</th><th>Vender en</th><th>Cómo vender</th></tr></thead>
+        <thead><tr><th>Recurso</th><th>Plata/unidad (neto)</th><th>Vender en</th><th>Cómo vender</th></tr></thead>
         <tbody>${gathering.map(g => `<tr>
           <td class="txt">${escapeHtml(g.name || '')}</td>
           <td class="pos">${fmt(g.net)}</td>
@@ -79,7 +79,7 @@ function starterCard(capital, ordered, gathering) {
   let rec;
   if (capital < 500000) {
     rec = (gathering && gathering.length)
-      ? `Con poco capital, empezá <b>sin arriesgar plata</b>: recolectá <b>${escapeHtml(gathering[0].name || 'materia prima')}</b> (deja ~${fmt(gathering[0].net)}/ud) y vendé en <b>${escapeHtml(gathering[0].city)}</b>. Con lo que juntes, subí a los planes de abajo.`
+      ? `Con poco capital, empezá <b>sin arriesgar plata</b>: recolectá <b>${escapeHtml(gathering[0].name || 'materia prima')}</b> (deja ~${fmt(gathering[0].net)}/unidad) y vendé en <b>${escapeHtml(gathering[0].city)}</b>. Con lo que juntes, subí a los planes de abajo.`
       : `Con poco capital, el camino seguro es recolectar en zona azul y vender, o el flipeo si aparece abajo. No arriesgues lo que no podés perder.`;
   } else if (ordered && ordered.length) {
     const p = ordered[0];
