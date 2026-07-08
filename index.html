@@ -9,6 +9,14 @@
   <link rel="stylesheet" href="css/site.css" />
 </head>
 <body>
+  <!-- Fondo temático que va cambiando de "mood" a medida que scrolleás (capas de
+       gradiente, sin imágenes: liviano y fluido en desktop y móvil). -->
+  <div id="scenery" aria-hidden="true">
+    <div class="scene scene-forge on"></div>
+    <div class="scene scene-silver"></div>
+    <div class="scene scene-market"></div>
+    <div class="scene scene-treasury"></div>
+  </div>
   <div id="page">
   <nav>
     <div class="wrap">
@@ -23,7 +31,7 @@
     </div>
   </nav>
 
-  <header class="hero">
+  <header class="hero" data-scene="forge">
     <div class="glow"></div>
     <div class="wrap">
       <span class="eyebrow">Mercado · Albion Online</span>
@@ -45,7 +53,7 @@
   </header>
 
   <!-- EL ARSENAL -->
-  <section id="arsenal">
+  <section id="arsenal" data-scene="forge">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">El arsenal</span>
@@ -98,8 +106,38 @@
     </div>
   </section>
 
+  <!-- CAPTURAS -->
+  <section id="capturas" class="band" data-scene="silver">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Un vistazo</span>
+        <h2>Así se ve el sistema</h2>
+        <p>Interfaz limpia y al grano: abrís, elegís tu estrategia y tenés los números claros —
+          impuestos incluidos— al instante.</p>
+      </div>
+      <div class="shots reveal">
+        <figure class="shot">
+          <img src="img/app-plan.jpg" width="1424" height="861" loading="lazy" alt="Plan de plata: la ruta paso a paso" />
+          <figcaption>Plan de plata — tu ruta paso a paso, apta para principiantes</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/app-dashboard.jpg" width="1424" height="861" loading="lazy" alt="Dashboard con el pulso del mercado" />
+          <figcaption>Dashboard — el pulso del mercado de un vistazo</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/app-oro.jpg" width="1424" height="861" loading="lazy" alt="Gráfico del oro con señal de compra y venta" />
+          <figcaption>Oro — gráfico con señal de compra y venta</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/app-refinado.jpg" width="1424" height="861" loading="lazy" alt="Calculadora de refinado con recomendación del día" />
+          <figcaption>Refinado — beneficio por tier y qué conviene hoy</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <!-- CÓMO TE AYUDA -->
-  <section class="band">
+  <section class="band" data-scene="silver">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">Cómo te ayuda</span>
@@ -128,7 +166,7 @@
   </section>
 
   <!-- POR QUÉ ES GRATIS -->
-  <section id="sostiene">
+  <section id="sostiene" data-scene="market">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">Por qué es gratis</span>
@@ -162,7 +200,7 @@
   </section>
 
   <!-- GUÍAS -->
-  <section class="band">
+  <section class="band" data-scene="market">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">El códice</span>
@@ -195,7 +233,7 @@
   </section>
 
   <!-- COMUNIDAD / DESCARGA -->
-  <section id="comunidad" class="cta-band">
+  <section id="comunidad" class="cta-band" data-scene="treasury">
     <div class="glow"></div>
     <div class="wrap">
       <div class="reveal">
@@ -214,7 +252,7 @@
   </section>
 
   <!-- DONAR -->
-  <section id="donar" class="band cta-band" style="display:none">
+  <section id="donar" class="band cta-band" style="display:none" data-scene="treasury">
     <div class="wrap">
       <div class="reveal">
         <span class="eyebrow" style="justify-content:center">Apoyo</span>
@@ -257,6 +295,29 @@
         es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
       }, { threshold: 0.12 });
       document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+
+      // Fondo temático: activa la escena del bloque MÁS visible a medida que scrolleás.
+      var scenes = {
+        forge: document.querySelector('.scene-forge'),
+        silver: document.querySelector('.scene-silver'),
+        market: document.querySelector('.scene-market'),
+        treasury: document.querySelector('.scene-treasury')
+      };
+      var curScene = 'forge';
+      function setScene(k) {
+        if (!scenes[k] || curScene === k) return;
+        Object.keys(scenes).forEach(function (n) { if (scenes[n]) scenes[n].classList.toggle('on', n === k); });
+        curScene = k;
+      }
+      var ratios = new Map();
+      var sceneIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { ratios.set(e.target, e.isIntersecting ? e.intersectionRatio : 0); });
+        var best = null, max = -1;
+        ratios.forEach(function (r, el) { if (r > max) { max = r; best = el; } });
+        if (best && best.dataset.scene) setScene(best.dataset.scene);
+      }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+      document.querySelectorAll('[data-scene]').forEach(function (el) { ratios.set(el, 0); sceneIO.observe(el); });
+
       // El logo lleva al tope de la página (scroll suave).
       var brand = document.getElementById('brand-home');
       if (brand) brand.addEventListener('click', function (e) {
