@@ -1,14 +1,26 @@
 /* Franjas de anuncios laterales. Crea dos columnas (izq/der) con un slot cada
-   una. El slot se rellena con el "Native Banner" de Monetag si hay una zona
-   configurada en config.js (window.SITE.adZone); si no, muestra un placeholder.
+   una. Cada slot muestra el banner de Adsterra (window.SITE.adsterra) dentro de
+   un iframe AISLADO, así el atOptions de Adsterra nunca choca con la página ni
+   entre los dos costados. Sin config, muestra un placeholder (no rompe nada).
 
-   PARA ENCENDER LOS BANNERS LATERALES:
-   1) En Monetag > Sitios > (tu sitio) > crear una zona tipo "Native Banner".
-   2) Copiá el ID de zona y pegalo en config.js:  adZone: '1234567'
-      (y adDomain si Monetag te da otro dominio de script; por defecto nap5k.com)
-   Con eso, los dos costados muestran banners reales. Sin zona, quedan como
-   espacio reservado (no rompe nada). El In-Page Push ya funciona aparte. */
+   PARA CAMBIAR/AGREGAR BANNERS: editá config.js -> adsterra { key, width, height }
+   con la unidad "Banner" que te da Adsterra en GET CODE. */
 (function () {
+  function adsterraFrame(a) {
+    var w = a.width || 160, h = a.height || 600;
+    var ifr = document.createElement('iframe');
+    ifr.width = w; ifr.height = h; ifr.title = 'ad';
+    ifr.setAttribute('scrolling', 'no'); ifr.setAttribute('frameborder', '0');
+    ifr.style.cssText = 'border:0;display:block;max-width:100%';
+    var opt = JSON.stringify({ key: a.key, format: 'iframe', height: h, width: w, params: {} });
+    var C = '<' + '/script>';
+    ifr.srcdoc = '<!doctype html><html><head><meta charset="utf-8">'
+      + '<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent}</style></head><body>'
+      + '<script>atOptions=' + opt + ';' + C
+      + '<script src="https://www.highperformanceformat.com/' + a.key + '/invoke.js">' + C
+      + '</body></html>';
+    return ifr;
+  }
   function slot() {
     var d = document.createElement('div');
     d.className = 'ad-slot';
@@ -16,14 +28,8 @@
     l.className = 'ad-lbl'; l.textContent = 'Publicidad';
     d.appendChild(l);
     var S = window.SITE || {};
-    var zone = S.adZone || '';
-    var dom = S.adDomain || 'nap5k.com';
-    if (zone) {
-      var s = document.createElement('script');
-      s.async = true; s.setAttribute('data-cfasync', 'false');
-      s.src = '//' + dom + '/tag.min.js';
-      s.setAttribute('data-zone', zone);
-      d.appendChild(s);
+    if (S.adsterra && S.adsterra.key) {
+      d.appendChild(adsterraFrame(S.adsterra));
     } else {
       var p = document.createElement('div');
       p.className = 'ad-ph'; p.textContent = 'Espacio publicitario';
