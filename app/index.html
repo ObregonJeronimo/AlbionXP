@@ -119,6 +119,9 @@
     <div class="tabs">
       <button class="tab on" data-tab="precios">Precios</button>
       <button class="tab" data-tab="refinado">Refinado</button>
+      <button class="tab" data-tab="transporte">Transporte</button>
+      <button class="tab" data-tab="mn">Mercado Negro</button>
+      <button class="tab" data-tab="oro">Oro</button>
     </div>
 
     <div class="controls">
@@ -156,6 +159,26 @@
         <button class="btn2" id="ref-go">Calcular</button>
       </div>
       <div id="ref-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Elegí un recurso y la ciudad donde refinás (por defecto, la del bono ★). Te calculo el beneficio por tier, con y sin foco, con impuestos incluidos.</p></div>
+    </section>
+
+    <section id="tab-transporte" hidden>
+      <div class="controls" style="margin-top:2px">
+        <button class="btn2" id="flip-go">Buscar rutas de transporte</button>
+        <span style="color:var(--faint);font-size:13px">Compara recursos, comida y pociones entre las 7 ciudades. Tarda unos segundos.</span>
+      </div>
+      <div id="flip-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Comprá barato en una ciudad y vendé caro en otra. Te busco las mejores rutas por rentabilidad.</p></div>
+    </section>
+
+    <section id="tab-mn" hidden>
+      <div class="controls" style="margin-top:2px">
+        <button class="btn2" id="mn-go">Escanear Mercado Negro</button>
+        <span style="color:var(--faint);font-size:13px">Equipo que el MN de Caerleon paga más caro que su precio en ciudad. Tarda unos segundos.</span>
+      </div>
+      <div id="mn-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Comprá gear barato en las ciudades y vendéselo al Mercado Negro de Caerleon (zona roja: cuidado).</p></div>
+    </section>
+
+    <section id="tab-oro" hidden>
+      <div id="oro-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Precio del oro y señal de compra/venta.</p></div>
     </section>
   </div>
 
@@ -358,13 +381,15 @@
     $('ref-res').addEventListener('change',refCityOpts);
     $('ref-go').addEventListener('click',runRefine);
 
-    function fetchPricesMulti(ids,city,quality){
+    function fetchPricesMulti(ids,cities,quality){
       var seen={},uniq=[]; ids.forEach(function(i){ if(!seen[i]){seen[i]=1;uniq.push(i);} });
-      var loc=city.replace(/ /g,''), chunks=[],cur=[];
+      var loc=(Array.isArray(cities)?cities:[cities]).map(function(c){return c.replace(/ /g,'');}).join(',');
+      var qs=quality?('&qualities='+quality):'';
+      var chunks=[],cur=[];
       for(var i=0;i<uniq.length;i++){ cur.push(uniq[i]); if(cur.length>=35){chunks.push(cur);cur=[];} }
       if(cur.length) chunks.push(cur);
       return Promise.all(chunks.map(function(c){
-        var path='/api/v2/stats/prices/'+c.map(encodeURIComponent).join(',')+'?locations='+loc+'&qualities='+quality;
+        var path='/api/v2/stats/prices/'+c.map(encodeURIComponent).join(',')+'?locations='+loc+qs;
         return fetch(WORKER+'/aodp?server='+STATE.server+'&u='+encodeURIComponent(path)).then(function(r){return r.json();});
       })).then(function(arrs){ var o=[]; arrs.forEach(function(a){ if(Array.isArray(a)) o=o.concat(a); }); return o; });
     }
@@ -407,17 +432,105 @@
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
-    // ---------- tabs ----------
+    // ---------- universos e impuestos ----------
+    function instFees(p){ return p?SALES_P:SALES_N; } // venta instantánea: solo impuesto (sin tarifa de orden)
+    function liquidUniverse(){
+      var ids=[], REF=['METALBAR','PLANKS','CLOTH','LEATHER','STONEBLOCK'], RAW=['ORE','WOOD','FIBER','HIDE','ROCK'];
+      REF.forEach(function(r){ for(var t=4;t<=8;t++){ ids.push('T'+t+'_'+r); if(r!=='STONEBLOCK') for(var e=1;e<=3;e++) ids.push('T'+t+'_'+r+'_LEVEL'+e+'@'+e); } });
+      RAW.forEach(function(r){ for(var t=4;t<=8;t++){ ids.push('T'+t+'_'+r); for(var e=1;e<=3;e++) ids.push('T'+t+'_'+r+'_LEVEL'+e+'@'+e); } });
+      ['T6_MEAL_STEW','T8_MEAL_STEW','T6_MEAL_OMELETTE','T8_MEAL_OMELETTE','T4_POTION_HEAL','T6_POTION_HEAL','T4_POTION_ENERGY','T6_POTION_ENERGY'].forEach(function(x){ ids.push(x); });
+      return ids;
+    }
+    var GEAR=['2H_CLAYMORE','MAIN_SWORD','2H_AXE','2H_BOW','MAIN_FIRESTAFF','2H_ARCANESTAFF','MAIN_HOLYSTAFF','2H_NATURESTAFF','MAIN_SPEAR','MAIN_DAGGER','MAIN_HAMMER','2H_CROSSBOWLARGE','MAIN_CURSEDSTAFF','MAIN_FROSTSTAFF','ARMOR_PLATE_SET1','ARMOR_PLATE_SET2','ARMOR_LEATHER_SET1','ARMOR_LEATHER_SET2','ARMOR_CLOTH_SET1','ARMOR_CLOTH_SET2','HEAD_PLATE_SET1','HEAD_LEATHER_SET1','HEAD_CLOTH_SET1','SHOES_PLATE_SET1','SHOES_LEATHER_SET1','SHOES_CLOTH_SET1','BAG','CAPE'];
+    function gearUniverse(tiers,ench){ var ids=[]; GEAR.forEach(function(l){ tiers.forEach(function(t){ ench.forEach(function(e){ ids.push(e>0?'T'+t+'_'+l+'@'+e:'T'+t+'_'+l); }); }); }); return ids; }
+    function fresh2(p){ return p && p.sell_price_min && (''+p.sell_price_min_date).indexOf(NO_DATE)!==0; }
+
+    // ---------- TRANSPORTE / FLIP ----------
+    $('flip-go').addEventListener('click',runFlip);
+    function runFlip(){
+      var out=$('flip-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Comparando precios entre ciudades…</div>';
+      fetchPricesMulti(liquidUniverse(), CITIES, 1).then(function(prices){
+        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        var feeR=sellFees(STATE.premium), byItem={};
+        prices.forEach(function(p){ if(!fresh2(p)) return; (byItem[p.item_id]=byItem[p.item_id]||[]).push({city:p.city,sell:p.sell_price_min,date:p.sell_price_min_date}); });
+        var routes=[];
+        Object.keys(byItem).forEach(function(id){ var rows=byItem[id], buy=null,sel=null;
+          rows.forEach(function(a){ if(!buy||a.sell<buy.sell) buy=a; });
+          rows.forEach(function(b){ if(b.city!==buy.city && (!sel||b.sell>sel.sell)) sel=b; });
+          if(!buy||!sel) return;
+          var net=(sel.sell-1)*(1-feeR)-buy.sell; if(net<=0) return;
+          var roi=net/buy.sell; if(roi<0.08) return;
+          routes.push({id:id,bc:buy.city,bp:buy.sell,sc:sel.city,sp:sel.sell,net:net,roi:roi,date:sel.date});
+        });
+        routes.sort(function(a,b){ return b.roi-a.roi; });
+        var top=routes.slice(0,25);
+        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin rutas rentables ahora mismo. Probá otro servidor o volvé más tarde.</div>'; return; }
+        var body=top.map(function(r){
+          var warn=(r.bc==='Caerleon'||r.sc==='Caerleon')?' <span style="color:var(--red)">⚠</span>':'';
+          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
+            '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="txt">'+esc(r.sc)+' · '+fmt(r.sp)+warn+'</td>'+
+            '<td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
+        }).join('');
+        out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th class="txt">Vender en</th><th>Benef./u</th><th>ROI</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table>'+
+          '<p class="pnote">Comprás en la ciudad más barata y vendés con orden de venta en la más cara, tras impuesto ('+(feeR*100).toFixed(1)+'%). <span style="color:var(--red)">⚠</span> = pasa por Caerleon (zona roja: podés morir con la carga). Verificá el volumen antes de mover mucho.</p></div>';
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
+    // ---------- MERCADO NEGRO ----------
+    $('mn-go').addEventListener('click',runMN);
+    function runMN(){
+      var out=$('mn-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el Mercado Negro…</div>';
+      var ids=gearUniverse([4,5,6],[0,1]), instFee=instFees(STATE.premium);
+      Promise.all([ fetchPricesMulti(ids, CITIES, 1), fetchPricesMulti(ids, ['Black Market'], 1) ]).then(function(a){
+        if(!Array.isArray(a[0])||!Array.isArray(a[1])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        var cheap={};
+        a[0].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city}; });
+        var opps=[];
+        a[1].forEach(function(p){ if(p.city!=='Black Market'||!p.buy_price_max||(''+p.buy_price_max_date).indexOf(NO_DATE)===0) return; var c=cheap[p.item_id]; if(!c) return; var net=p.buy_price_max*(1-instFee)-c.sell; if(net>2000) opps.push({id:p.item_id,bc:c.city,bp:c.sell,mn:p.buy_price_max,net:net,date:p.buy_price_max_date}); });
+        opps.sort(function(a,b){ return b.net-a.net; });
+        var top=opps.slice(0,30);
+        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Nada rentable hacia el MN ahora mismo. El MN sube sus órdenes con la actividad PvE: probá en horas pico u otro servidor.</div>'; return; }
+        var body=top.map(function(r){
+          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
+            '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
+        }).join('');
+        out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th>MN paga</th><th>Beneficio/u</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table>'+
+          '<p class="pnote">Comprás el equipo barato en la ciudad y lo vendés al instante al Mercado Negro (impuesto '+(instFee*100)+'%). Hay que llevarlo a <b>Caerleon</b> (zona roja): montura rápida y no cargues de más. Base calidad Normal.</p></div>';
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
+    // ---------- ORO ----------
+    var goldLoaded=false;
+    function loadGold(){
+      var out=$('oro-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Cargando precio del oro…</div>';
+      fetch(WORKER+'/aodp?server='+STATE.server+'&u='+encodeURIComponent('/api/v2/stats/gold.json?count=336')).then(function(r){return r.json();}).then(function(data){
+        if(!Array.isArray(data)||!data.length){ out.innerHTML='<div class="err">Sin datos de oro ahora mismo.</div>'; return; }
+        var pts=data.slice().reverse(), prices=pts.map(function(p){return p.price;});
+        var cur=prices[prices.length-1], mn=Math.min.apply(null,prices), mx=Math.max.apply(null,prices), avg=prices.reduce(function(a,b){return a+b;},0)/prices.length;
+        var w=680,h=120, span=(mx-mn)||1;
+        var d=prices.map(function(p,i){ var x=(i/(prices.length-1))*w, y=h-((p-mn)/span)*h; return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1); }).join(' ');
+        var dev=cur/avg-1, sig= dev<-0.02?['pos','Por debajo de su media: zona de COMPRA potencial.'] : dev>0.02?['neg','Por encima de su media: zona de VENTA potencial.'] : ['','Pegado a su media: sin señal clara, esperá.'];
+        function st(k,v,c){ return '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">'+k+'</div><div style="font-family:Cinzel,serif;font-size:26px;font-weight:700;color:'+(c||'var(--gold)')+'">'+v+'</div></div>'; }
+        out.innerHTML='<div class="panel"><div style="padding:22px">'+
+          '<div style="display:flex;gap:30px;flex-wrap:wrap;margin-bottom:18px">'+st('Actual',fmt(cur))+st('Media 14d',fmt(avg),'var(--text)')+st('Mín 14d',fmt(mn),'var(--green)')+st('Máx 14d',fmt(mx),'var(--red)')+'</div>'+
+          '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="width:100%;height:130px;background:var(--iron3);border:1px solid var(--line);border-radius:8px"><path d="'+d+'" fill="none" stroke="var(--gold)" stroke-width="1.5"/></svg>'+
+          '<p class="pnote" style="padding:14px 0 0"><b class="'+sig[0]+'">'+sig[1]+'</b> El oro se compra y vende con plata <b>sin impuestos</b>: es la inversión "limpia" del juego. Señal orientativa según su media de 14 días — sigue tendencias largas, no es para scalping.</p>'+
+        '</div></div>';
+      }).catch(function(e){ out.innerHTML='<div class="err">Error cargando oro: '+esc(e.message||String(e))+'</div>'; });
+    }
+
+    // ---------- tabs (genérico) ----------
     document.querySelector('.tabs').addEventListener('click',function(ev){
       var b=ev.target.closest('.tab'); if(!b) return;
       document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
-      $('tab-precios').hidden = b.dataset.tab!=='precios';
-      $('tab-refinado').hidden = b.dataset.tab!=='refinado';
+      var tab=b.dataset.tab;
+      document.querySelectorAll('#tab-precios,#tab-refinado,#tab-transporte,#tab-mn,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      if(tab==='oro' && !goldLoaded){ goldLoaded=true; loadGold(); }
     });
 
-    // ---------- controles (compartidos entre pestañas) ----------
-    $('server').addEventListener('change',function(){ STATE.server=this.value; if(STATE.id) renderPanel(); if(!$('tab-refinado').hidden && $('ref-results').querySelector('.ptable')) runRefine(); });
-    $('premium').addEventListener('change',function(){ STATE.premium=this.checked; if(STATE.id) renderPanel(); if(!$('tab-refinado').hidden && $('ref-results').querySelector('.ptable')) runRefine(); });
+    // ---------- controles (compartidos) ----------
+    $('server').addEventListener('change',function(){ STATE.server=this.value; goldLoaded=false; if(!$('tab-oro').hidden){ goldLoaded=true; loadGold(); } if(STATE.id) renderPanel(); });
+    $('premium').addEventListener('change',function(){ STATE.premium=this.checked; if(STATE.id) renderPanel(); });
   })();
   </script>
 </body>
