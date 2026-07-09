@@ -139,6 +139,7 @@
       <button class="tab" data-tab="craft">Crafteo</button>
       <button class="tab" data-tab="transporte">Transporte</button>
       <button class="tab" data-tab="mn">Mercado Negro</button>
+      <button class="tab" data-tab="sniper">Sniper</button>
       <button class="tab" data-tab="mov">Movimiento</button>
       <button class="tab" data-tab="oro">Oro</button>
     </div>
@@ -218,6 +219,17 @@
         <span style="color:var(--faint);font-size:13px">Equipo que el MN de Caerleon paga más caro que su precio en ciudad. Tarda unos segundos.</span>
       </div>
       <div id="mn-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Comprá gear barato en las ciudades y vendéselo al Mercado Negro de Caerleon (zona roja: cuidado).</p></div>
+    </section>
+
+    <section id="tab-sniper" hidden>
+      <p class="desc"><b>Cazá gangas.</b> Items listados muy por debajo de su precio medio: los comprás y relistás al instante en la misma ciudad (sin transporte). Tip: mirá la liquidez — un descuentazo en algo que nadie compra es una trampa.</p>
+      <div class="controls" style="margin-top:2px">
+        <div><label>Ciudad</label><select id="snp-city"></select></div>
+        <div><label>Tier</label><select id="snp-tier"><option value="4">T4</option><option value="5" selected>T5</option><option value="6">T6</option><option value="7">T7</option></select></div>
+        <div><label>Descuento mín.</label><select id="snp-disc"><option value="0.15">15%</option><option value="0.25" selected>25%</option><option value="0.4">40%</option></select></div>
+        <button class="btn2" id="snp-go">Buscar gangas</button>
+      </div>
+      <div id="snp-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Busco equipo listado muy por debajo de su media histórica para revenderlo con ganancia.</p></div>
     </section>
 
     <section id="tab-mov" hidden>
@@ -582,7 +594,7 @@
       for(var i=0;i<uniq.length;i++){ cur.push(uniq[i]); if(cur.length>=30){chunks.push(cur);cur=[];} }
       if(cur.length) chunks.push(cur);
       return Promise.all(chunks.map(function(c){
-        var path='/api/v2/stats/history/'+c.map(encodeURIComponent).join(',')+'.json?time-scale='+timeScale+'&qualities='+quality+'&locations='+loc;
+        var path='/api/v2/stats/history/'+c.map(encodeURIComponent).join(',')+'.json?time-scale='+timeScale+(quality?('&qualities='+quality):'')+'&locations='+loc;
         return fetch(WORKER+'/aodp?server='+STATE.server+'&u='+encodeURIComponent(path)).then(function(r){return r.json();});
       })).then(function(arrs){ var o=[]; arrs.forEach(function(a){ if(Array.isArray(a)) o=o.concat(a); }); return o; });
     }
@@ -608,6 +620,33 @@
         }).join('');
         out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Unidades</th><th>Plata movida</th><th>Precio medio</th></tr></thead><tbody>'+body+'</tbody></table>'+
           '<p class="pnote">Lo más comerciado en '+esc(city)+' en las últimas '+hours+' h (histórico de ventas del juego). Cruzá esto con <b>Transporte</b>: margen alto + volumen alto = la mejor ruta.</p></div>';
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
+    // ---------- SNIPER DE GANGAS ----------
+    (function(){ var s=$('snp-city'); if(s) s.innerHTML=CITIES.map(function(c){return '<option'+(c==='Caerleon'?' selected':'')+'>'+c+'</option>';}).join(''); })();
+    $('snp-go').addEventListener('click',runSniper);
+    function runSniper(){
+      var city=$('snp-city').value, tier=+$('snp-tier').value, minDisc=+$('snp-disc').value;
+      var out=$('snp-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Buscando gangas en '+esc(city)+'… (precios + histórico, tarda unos segundos)</div>';
+      var ids=gearUniverse([tier],[0]), feeR=sellFees(STATE.premium);
+      var nd='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">';
+      fetchPricesMulti(ids,[city],null).then(function(prices){
+        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        var listed=prices.filter(function(p){ return p.city===city && fresh2(p); });
+        var seen={},lids=[]; listed.forEach(function(p){ if(!seen[p.item_id]){seen[p.item_id]=1;lids.push(p.item_id);} });
+        if(!lids.length){ out.innerHTML=nd+'Sin listados frescos en '+esc(city)+' para T'+tier+' ahora mismo. Probá otra ciudad o tier.</div>'; return; }
+        return fetchHistoryMulti(lids,city,24,null).then(function(hist){
+          var avgBy={}; (hist||[]).forEach(function(s){ var pts=(s.data||[]).slice(-7); if(!pts.length) return; var u=pts.reduce(function(a,p){return a+p.item_count;},0); if(u<10) return; avgBy[s.item_id+'|'+s.quality]={avg:pts.reduce(function(a,p){return a+p.avg_price*p.item_count;},0)/u, vol:u/7}; });
+          var deals=[];
+          listed.forEach(function(p){ var h=avgBy[p.item_id+'|'+p.quality]; if(!h||!h.avg) return; var disc=1-p.sell_price_min/h.avg; if(disc<minDisc) return; var net=h.avg*(1-feeR)-p.sell_price_min; if(net<=0) return; deals.push({id:p.item_id,q:p.quality,price:p.sell_price_min,avg:h.avg,disc:disc,net:net,vol:h.vol,date:p.sell_price_min_date}); });
+          deals.sort(function(a,b){ return b.disc-a.disc; });
+          var top=deals.slice(0,30);
+          if(!top.length){ out.innerHTML=nd+'Sin gangas ≥'+Math.round(minDisc*100)+'% en '+esc(city)+' ahora. Los mejores momentos son tras eventos y en horas pico; probá bajar el descuento mínimo.</div>'; return; }
+          var liq=function(v){ return v>=20?'<span class="badge-r safe">líquido</span>':v>=5?'<span class="badge-r" style="background:rgba(217,164,65,.15);color:var(--gold);border:1px solid rgba(217,164,65,.4)">medio</span>':'<span class="badge-r risk">ilíquido</span>'; };
+          var body=top.map(function(d){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(d.id,d.q)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(d.id))+' <span style="color:var(--muted)">·'+(QNAMES[d.q]||('q'+d.q))+'</span></span></td><td class="pos">'+fmt(d.price)+'</td><td>'+fmt(d.avg)+'</td><td class="pos">'+Math.round(d.disc*100)+'%</td><td class="pos">'+fmt(d.net)+'</td><td>'+fmt(Math.round(d.vol))+'/día '+liq(d.vol)+'</td></tr>'; }).join('');
+          out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Listado</th><th>Media 7d</th><th>Descuento</th><th>Ganancia relist</th><th>Volumen</th></tr></thead><tbody>'+body+'</tbody></table><p class="pnote">Comprás el item barato y lo relistás al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo de zona roja). Ganancia ya con impuesto y comisión descontados. <b>Cuidado con la liquidez</b>: un descuentazo en algo ilíquido puede tardar días en revenderse.</p></div>';
+        });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
@@ -687,7 +726,7 @@
       var b=ev.target.closest('.tab'); if(!b) return;
       document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
       var tab=b.dataset.tab;
-      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-craft,#tab-transporte,#tab-mn,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-craft,#tab-transporte,#tab-mn,#tab-sniper,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
       if(tab==='oro' && !goldLoaded){ goldLoaded=true; loadGold(); }
     });
 
