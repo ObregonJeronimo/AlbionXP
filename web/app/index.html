@@ -7,6 +7,9 @@
   <meta name="description" content="Comparador de precios de Albion Online en el navegador: buscá un item y mirá su precio en cada ciudad y en el Mercado Negro. Sin descargas." />
   <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Alegreya+Sans:wght@400;500;700&display=swap" />
+  <link rel="stylesheet" href="../ads.css" />
+  <!-- Monetag In-Page Push (zona 11246499) — anuncios en la web -->
+  <script>(function(s){s.dataset.zone='11246499',s.src='https://nap5k.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
   <style>
     :root{
       --iron:#13110d;--iron2:#1a1610;--iron3:#211b13;--line:#372c1b;--line2:#4a3a22;
@@ -272,7 +275,7 @@
     </section>
 
     <section id="tab-foro" hidden>
-      <p class="desc"><b>Comunidad.</b> Compartí rutas, dudas y hallazgos con otros jugadores. Creá tu cuenta con email, verificalo y participá. Está moderado para mantenerlo limpio.</p>
+      <p class="desc"><b>Comunidad.</b> Compartí rutas, dudas y hallazgos con otros jugadores. Cualquiera puede leer; para publicar, comentar o votar iniciá sesión con Google. Está moderado para mantenerlo limpio.</p>
       <div id="foro-auth"></div>
       <div id="foro-body"></div>
     </section>
@@ -785,27 +788,28 @@
       var el=$('foro-auth'); if(!el) return;
       if(!fbReady){ el.innerHTML=''; return; }
       if(!fbUser){
-        el.className='foro-form';
-        el.innerHTML='<div class="grid2"><input class="foro-in" id="fa-email" type="email" placeholder="Tu email" autocomplete="email"/><input class="foro-in" id="fa-pass" type="password" placeholder="Contraseña" autocomplete="current-password"/></div>'
-          +'<input class="foro-in" id="fa-name" type="text" placeholder="Nombre para mostrar (solo si te registrás)" maxlength="40"/>'
-          +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="fbtn" id="fa-login">Entrar</button><button class="fbtn ghost" id="fa-reg">Crear cuenta</button><span class="flink" id="fa-reset">¿Olvidaste la contraseña?</span></div><div class="fmsg" id="fa-msg"></div>';
-        $('fa-login').onclick=foroLogin; $('fa-reg').onclick=foroRegister; $('fa-reset').onclick=foroReset;
-      } else if(!fbUser.emailVerified){
         el.className='foro-auth';
-        el.innerHTML='<b style="color:var(--goldb)">Verificá tu email.</b> Te enviamos un enlace a '+esc(fbUser.email)+'. Abrilo y después tocá «Ya verifiqué».'
-          +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="fbtn" id="fa-check">Ya verifiqué</button><button class="fbtn ghost" id="fa-resend">Reenviar</button><button class="fbtn ghost" id="fa-out">Salir</button></div><div class="fmsg" id="fa-msg"></div>';
-        $('fa-check').onclick=function(){ fbUser.reload().then(function(){ fbUser=fbAuth.currentUser; if(fbUser&&fbUser.emailVerified){ renderForoAuth(); showForoList(); } else foroMsg('Todavía no figura verificado. Revisá tu correo (y la carpeta de spam).'); }); };
-        $('fa-resend').onclick=function(){ fbUser.sendEmailVerification().then(function(){foroMsg('Reenviado.');}).catch(function(e){foroMsg(fbErr(e));}); };
-        $('fa-out').onclick=function(){ fbAuth.signOut(); };
+        el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+          +'<span>Podés leer todo sin cuenta. Para publicar, comentar o votar, iniciá sesión con Google.</span>'
+          +'<button class="fbtn" id="fa-google">Iniciar sesión con Google</button></div><div class="fmsg" id="fa-msg"></div>';
+        $('fa-google').onclick=foroGoogleLogin;
       } else {
         el.className='foro-auth row';
         el.innerHTML='<span>Conectado como <b style="color:var(--goldb)">'+esc(foroName())+'</b>'+(isOwner()?' <span class="badge-r safe">moderador</span>':'')+'</span><button class="fbtn ghost" id="fa-out">Salir</button>';
         $('fa-out').onclick=function(){ fbAuth.signOut(); showForoList(); };
       }
     }
-    function foroLogin(){ var e=($('fa-email').value||'').trim(), p=$('fa-pass').value||''; if(!e||!p){foroMsg('Completá email y contraseña.');return;} foroMsg('Entrando…'); fbAuth.signInWithEmailAndPassword(e,p).then(function(){ foroMsg(''); showForoList(); }).catch(function(x){foroMsg(fbErr(x));}); }
-    function foroRegister(){ var e=($('fa-email').value||'').trim(), p=$('fa-pass').value||'', n=(($('fa-name').value||'').trim()).slice(0,40); if(!e||!p){foroMsg('Completá email y contraseña.');return;} foroMsg('Creando cuenta…'); fbAuth.createUserWithEmailAndPassword(e,p).then(function(cred){ var u=cred.user; return (n?u.updateProfile({displayName:n}):Promise.resolve()).then(function(){ return u.sendEmailVerification(); }); }).then(function(){ foroMsg('¡Cuenta creada! Revisá tu email para verificarla y ya podés publicar.'); }).catch(function(x){foroMsg(fbErr(x));}); }
-    function foroReset(){ var e=($('fa-email').value||'').trim(); if(!e){foroMsg('Escribí tu email arriba y tocá de nuevo.');return;} fbAuth.sendPasswordResetEmail(e).then(function(){foroMsg('Te enviamos un enlace para restablecer la contraseña.');}).catch(function(x){foroMsg(fbErr(x));}); }
+    function foroGoogleLogin(){
+      foroMsg('Abriendo Google…');
+      var prov=new firebase.auth.GoogleAuthProvider();
+      fbAuth.signInWithPopup(prov).then(function(){ foroMsg(''); showForoList(); }).catch(function(e){
+        var c=(e&&e.code)||'';
+        if(c.indexOf('popup-closed')>=0||c.indexOf('cancelled-popup')>=0) foroMsg('Cerraste la ventana de Google antes de terminar.');
+        else if(c.indexOf('popup-blocked')>=0) foroMsg('El navegador bloqueó la ventana de Google. Permití los popups y probá de nuevo.');
+        else if(c.indexOf('unauthorized-domain')>=0) foroMsg('Este dominio no está autorizado en Firebase todavía.');
+        else foroMsg(fbErr(e));
+      });
+    }
     function showForoList(){
       var host=$('foro-body'); if(!host) return; host.innerHTML='<div class="loading"><span class="spin"></span>Cargando temas…</div>';
       var head='<div style="max-width:740px;margin:0 auto 12px;display:flex;justify-content:flex-end">'+(canPost()?'<button class="fbtn" id="f-new">+ Nuevo tema</button>':'')+'</div>';
@@ -872,5 +876,7 @@
     $('premium').addEventListener('change',function(){ STATE.premium=this.checked; if(STATE.id) renderPanel(); });
   })();
   </script>
+  <script src="../config.js"></script>
+  <script src="../ads.js"></script>
 </body>
 </html>

@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Albion Silver Hub — Forjá tu fortuna en Albion Online</title>
-  <meta name="description" content="App de escritorio gratuita que analiza el mercado de Albion Online y te dice, paso a paso, cómo hacer plata: transporte, refinado, crafteo, mercado negro, oro y un coach con IA." />
+  <meta name="description" content="Herramienta web gratuita para hacer plata en Albion Online: precios en vivo por ciudad, transporte, refinado, crafteo, mercado negro, sniper de gangas y oro. Sin descargas, desde el navegador." />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="css/site.css" />
+  <link rel="stylesheet" href="ads.css" />
+  <!-- Monetag In-Page Push (zona 11246499) — anuncios en la web -->
+  <script>(function(s){s.dataset.zone='11246499',s.src='https://nap5k.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 </head>
 <body>
   <!-- Fondo temático que va cambiando de "mood" a medida que scrolleás (capas de
@@ -26,8 +29,7 @@
         <a href="guias/index.html">Guías</a>
         <a href="#sostiene">Por qué es gratis</a>
         <a href="#comunidad">Comunidad</a>
-        <a href="app/">Precios online</a>
-        <a class="btn" id="nav-download" href="#">Descargar</a>
+        <a class="btn" href="app/">Abrir gratis</a>
       </div>
     </div>
   </nav>
@@ -41,16 +43,15 @@
         transporte, refinado, crafteo, mercado negro, sniper de gangas y un plan que te arma la ruta
         paso a paso. Todo en el navegador, gratis y sin registro.</p>
       <div class="hero-cta">
-        <a class="btn big" href="app/">Abrir en el navegador</a>
-        <a class="btn big ghost" id="hero-download" href="#">⬇ Descargar la app completa</a>
+        <a class="btn big" href="app/">Abrir gratis en el navegador</a>
       </div>
-      <p class="sub" style="font-size:14px;margin:16px auto 0;opacity:.8">Las 9 herramientas funcionan en el navegador, sin instalar nada. La app de escritorio suma un coach con IA local que te narra el plan y la comunidad.</p>
+      <p class="sub" style="font-size:14px;margin:16px auto 0;opacity:.8">Nueve herramientas + foro de la comunidad, todo en el navegador. Sin instalar nada, sin descargas.</p>
     </div>
     <div class="ribbon wrap" style="max-width:920px">
       <div class="stat"><div class="num">9</div><div class="lbl">Herramientas</div></div>
       <div class="stat"><div class="num">100%</div><div class="lbl">Gratis</div></div>
-      <div class="stat"><div class="num">0</div><div class="lbl">Registro</div></div>
-      <div class="stat"><div class="num">Auto</div><div class="lbl">Actualización</div></div>
+      <div class="stat"><div class="num">En vivo</div><div class="lbl">Datos de mercado</div></div>
+      <div class="stat"><div class="num">Web</div><div class="lbl">Sin instalar</div></div>
     </div>
   </header>
 
@@ -67,7 +68,7 @@
         <div class="cat"><span class="eyebrow">Inteligencia</span></div>
         <div class="tool">
           <div class="medallion"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z"/></svg></div>
-          <div><h3>Plan de plata</h3><p>Decís cuánta plata querés y cuánto capital tenés; te arma la ruta más rápida paso a paso. Un coach con IA local lo explica.</p></div>
+          <div><h3>Plan de plata</h3><p>Le decís tu capital y te muestra, con datos reales del momento, las mejores jugadas para ganar plata — ordenadas por rentabilidad.</p></div>
         </div>
         <div class="cat"><span class="eyebrow">Mercados</span></div>
         <div class="tool">
@@ -113,18 +114,18 @@
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">Un vistazo</span>
-        <h2>Así se ve el sistema</h2>
-        <p>Interfaz limpia y al grano: abrís, elegís tu estrategia y tenés los números claros —
-          impuestos incluidos— al instante.</p>
+        <h2>Así se ve</h2>
+        <p>Interfaz limpia y al grano, directo en el navegador: elegís tu estrategia y tenés los números
+          claros —impuestos incluidos— al instante.</p>
       </div>
       <div class="shots reveal">
         <figure class="shot">
-          <img src="img/app-plan.jpg" width="1424" height="861" loading="lazy" alt="Plan de plata: la ruta paso a paso" />
-          <figcaption>Plan de plata — tu ruta paso a paso, apta para principiantes</figcaption>
+          <img src="img/app-plan.jpg" width="1424" height="861" loading="lazy" alt="Plan de plata: las mejores jugadas del momento" />
+          <figcaption>Plan de plata — las mejores jugadas del momento según tu capital</figcaption>
         </figure>
         <figure class="shot">
-          <img src="img/app-dashboard.jpg" width="1424" height="861" loading="lazy" alt="Dashboard con el pulso del mercado" />
-          <figcaption>Dashboard — el pulso del mercado de un vistazo</figcaption>
+          <img src="img/app-dashboard.jpg" width="1424" height="861" loading="lazy" alt="Comparador de precios por ciudad" />
+          <figcaption>Precios — el precio de cualquier item en las 7 ciudades y el MN</figcaption>
         </figure>
         <figure class="shot">
           <img src="img/app-oro.jpg" width="1424" height="861" loading="lazy" alt="Gráfico del oro con señal de compra y venta" />
@@ -152,7 +153,7 @@
           <ul>
             <li>Rutas de transporte de bajo riesgo con poca inversión.</li>
             <li>Gangas para comprar y revender en la misma ciudad.</li>
-            <li>El coach te dice el camino más rápido a tu primer millón.</li>
+            <li>El plan te marca el camino más rápido a tu primer millón.</li>
           </ul>
         </div>
         <div class="path">
@@ -160,7 +161,7 @@
           <ul>
             <li>Cadenas de refinado y crafteo con bonos de ciudad.</li>
             <li>Flips al Mercado Negro con beneficios de cientos de miles.</li>
-            <li>Frescura de datos configurable: última media hora, hora o día.</li>
+            <li>Datos de mercado en vivo del Albion Online Data Project.</li>
           </ul>
         </div>
       </div>
@@ -245,9 +246,7 @@
           Entrá desde el navegador, creá tu cuenta gratis (con email verificado) y sumate — sin instalar nada.</p>
         <a class="btn big" href="app/#foro">Abrir el foro</a>
         <p style="margin-top:16px;font-size:13.5px;opacity:.82;max-width:640px;margin-inline:auto;line-height:1.6">
-          ¿Preferís la app de escritorio? <a href="#" id="community-download">Descargala acá</a>. Al abrir el
-          instalador, Windows puede avisar <b>"editor desconocido"</b> — es normal en apps gratuitas sin
-          certificado de pago: tocá <b>Más información → Ejecutar de todas formas</b>. ¿Dudas? Mirá la
+          Todo desde el navegador, sin instalar nada. ¿Dudas? Mirá la
           <a href="privacidad.html">política de privacidad</a>.</p>
       </div>
     </div>
@@ -270,22 +269,17 @@
       <p class="disclaimer">Albion Silver Hub es un proyecto independiente de fans. No está afiliado
         ni respaldado por Sandbox Interactive GmbH ni por Albion Online. Los datos de mercado provienen
         del Albion Online Data Project. "Albion Online" es marca de sus respectivos dueños.</p>
-      <p class="sig" id="version-line">Versión — · Windows 10/11</p>
+      <p class="sig">Hecho por y para la comunidad de Albion Online</p>
       <p style="margin-top:8px"><a id="contact-link" href="#">Contacto</a> · <a href="privacidad.html">Privacidad y términos</a></p>
     </div>
   </footer>
   </div>
 
   <script src="config.js"></script>
+  <script src="ads.js"></script>
   <script>
     (function () {
       var S = window.SITE || {};
-      var dl = S.downloadUrl || '#';
-      ['nav-download', 'hero-download', 'community-download'].forEach(function (id) {
-        var el = document.getElementById(id); if (el) el.href = dl;
-      });
-      document.getElementById('version-line').textContent =
-        'Versión ' + (S.version || '—') + ' · Windows 10/11 · se actualiza sola';
       var c = document.getElementById('contact-link');
       if (c && S.contactEmail) c.href = 'mailto:' + S.contactEmail;
       if (S.donateUrl) {
