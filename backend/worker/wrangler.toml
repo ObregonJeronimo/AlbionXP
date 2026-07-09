@@ -17,6 +17,14 @@ type = "ratelimit"
 namespace_id = "2001"
 simple = { limit = 2, period = 60 }
 
+# Limite mas generoso para el proxy de precios /aodp (la version web hace varias
+# requests por comparacion): 60 por minuto por IP. Frena abuso sin molestar al usuario.
+[[unsafe.bindings]]
+name = "AODP_LIMITER"
+type = "ratelimit"
+namespace_id = "2002"
+simple = { limit = 60, period = 60 }
+
 # Variables NO secretas (las secretas van con `npx wrangler secret put NOMBRE`):
 #   MP_ACCESS_TOKEN  (secret) — token de producción de Mercado Pago
 #   MP_WEBHOOK_SECRET (secret) — clave secreta del webhook de MP

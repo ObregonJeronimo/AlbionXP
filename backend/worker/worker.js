@@ -38,6 +38,8 @@ export default {
       if (request.method === 'POST' && url.pathname === '/beat') return await beat(request, env);
       if (request.method === 'POST' && url.pathname === '/hit') return await hit(request, env);
       if (request.method === 'GET' && url.pathname === '/admin') return await adminStats(request, url, env);
+      // --- proxy de precios AODP (para la version WEB: el navegador no puede llamar AODP por CORS) ---
+      if (request.method === 'GET' && url.pathname === '/aodp') return await aodpProxy(request, url, env);
       return json({ ok: true, service: 'albion-silver-hub-backend' });
     } catch (e) {
       console.log('ERROR', e.message);
@@ -51,6 +53,34 @@ function json(obj, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
   });
+}
+
+// ---------- Proxy de AODP: la API de precios NO tiene CORS, asi que la version WEB
+// la llama a traves de aca (agregamos el header CORS). Solo endpoints publicos /stats/. ----------
+const AODP_HOSTS = {
+  west: 'https://west.albion-online-data.com',
+  east: 'https://east.albion-online-data.com',
+  europe: 'https://europe.albion-online-data.com',
+};
+async function aodpProxy(request, url, env) {
+  const cors = { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' };
+  // Limite generoso por IP (una comparacion dispara varias requests): frena abuso, no molesta.
+  if (await tooFrequent(request, env, 'aodp', 'AODP_LIMITER')) {
+    return new Response(JSON.stringify({ error: 'demasiadas solicitudes, espera unos segundos' }), { status: 429, headers: cors });
+  }
+  const host = AODP_HOSTS[url.searchParams.get('server')] || AODP_HOSTS.europe;
+  let rel = url.searchParams.get('u') || '';
+  try { rel = decodeURIComponent(rel); } catch (_) { /* usar tal cual */ }
+  if (!rel.startsWith('/api/v2/stats/') || rel.includes('://') || rel.includes('..')) {
+    return new Response(JSON.stringify({ error: 'ruta no permitida' }), { status: 400, headers: cors });
+  }
+  try {
+    const r = await fetch(host + rel, { headers: { 'User-Agent': 'AlbionSilverHub-web/1.0' } });
+    const body = await r.text();
+    return new Response(body, { status: r.status, headers: { ...cors, 'Cache-Control': 'public, max-age=60' } });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String((e && e.message) || e) }), { status: 502, headers: cors });
+  }
 }
 
 // ---------- /checkout ----------
@@ -424,8 +454,8 @@ async function hmacHex(secret, msg) {
 // que un flujo abusivo no pueda drenar la cuota de escrituras de Firestore (que
 // comparte con el foro). Si el binding no esta configurado, no bloquea (el worker
 // sigue andando, solo sin limite) — asi un deploy sin el binding no se rompe.
-async function tooFrequent(request, env, keyName) {
-  const rl = env && env.RATE_LIMITER;
+async function tooFrequent(request, env, keyName, limiterName = 'RATE_LIMITER') {
+  const rl = env && env[limiterName];
   if (!rl || typeof rl.limit !== 'function') return false;
   try {
     const ip = request.headers.get('CF-Connecting-IP') || '0';
