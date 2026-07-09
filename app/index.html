@@ -121,6 +121,7 @@
       <button class="tab" data-tab="refinado">Refinado</button>
       <button class="tab" data-tab="transporte">Transporte</button>
       <button class="tab" data-tab="mn">Mercado Negro</button>
+      <button class="tab" data-tab="mov">Movimiento</button>
       <button class="tab" data-tab="oro">Oro</button>
     </div>
 
@@ -175,6 +176,15 @@
         <span style="color:var(--faint);font-size:13px">Equipo que el MN de Caerleon paga más caro que su precio en ciudad. Tarda unos segundos.</span>
       </div>
       <div id="mn-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Comprá gear barato en las ciudades y vendéselo al Mercado Negro de Caerleon (zona roja: cuidado).</p></div>
+    </section>
+
+    <section id="tab-mov" hidden>
+      <div class="controls" style="margin-top:2px">
+        <div><label>Ciudad</label><select id="vol-city"></select></div>
+        <div><label>Ventana</label><select id="vol-window"><option value="24" selected>Últimas 24 h</option><option value="48">Últimas 48 h</option><option value="168">Últimos 7 días</option></select></div>
+        <button class="btn2" id="vol-go">Analizar</button>
+      </div>
+      <div id="vol-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Qué se comercia de verdad en cada mercado ahora mismo: dónde hay demanda antes de transportar.</p></div>
     </section>
 
     <section id="tab-oro" hidden>
@@ -519,12 +529,50 @@
       }).catch(function(e){ out.innerHTML='<div class="err">Error cargando oro: '+esc(e.message||String(e))+'</div>'; });
     }
 
+    // ---------- MOVIMIENTO (volumen) ----------
+    $('vol-city').innerHTML=CITIES.map(function(c){ return '<option'+(c==='Caerleon'?' selected':'')+'>'+c+'</option>'; }).join('');
+    $('vol-go').addEventListener('click',runVol);
+    function fetchHistoryMulti(ids,city,timeScale,quality){
+      var seen={},uniq=[]; ids.forEach(function(i){ if(!seen[i]){seen[i]=1;uniq.push(i);} });
+      var loc=city.replace(/ /g,''), chunks=[],cur=[];
+      for(var i=0;i<uniq.length;i++){ cur.push(uniq[i]); if(cur.length>=30){chunks.push(cur);cur=[];} }
+      if(cur.length) chunks.push(cur);
+      return Promise.all(chunks.map(function(c){
+        var path='/api/v2/stats/history/'+c.map(encodeURIComponent).join(',')+'.json?time-scale='+timeScale+'&qualities='+quality+'&locations='+loc;
+        return fetch(WORKER+'/aodp?server='+STATE.server+'&u='+encodeURIComponent(path)).then(function(r){return r.json();});
+      })).then(function(arrs){ var o=[]; arrs.forEach(function(a){ if(Array.isArray(a)) o=o.concat(a); }); return o; });
+    }
+    function runVol(){
+      var city=$('vol-city').value, hours=+$('vol-window').value;
+      var out=$('vol-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Descargando histórico de '+esc(city)+'…</div>';
+      fetchHistoryMulti(liquidUniverse(), city, 1, 1).then(function(series){
+        if(!Array.isArray(series)){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        var cutoff=Date.now()-hours*3600*1000, rows=[];
+        series.forEach(function(s){
+          var pts=(s.data||[]).filter(function(p){ var iso=''+p.timestamp; var t=Date.parse(iso.slice(-1)==='Z'?iso:iso+'Z'); return t>=cutoff; });
+          if(!pts.length) return;
+          var units=pts.reduce(function(a,p){return a+p.item_count;},0); if(!units) return;
+          var silver=pts.reduce(function(a,p){return a+p.item_count*p.avg_price;},0);
+          rows.push({id:s.item_id,units:units,silver:silver,avg:silver/units});
+        });
+        rows.sort(function(a,b){ return b.silver-a.silver; });
+        var top=rows.slice(0,40);
+        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin actividad registrada en '+esc(city)+' en esa ventana. Los datos los aporta la comunidad; probá otra ciudad o servidor.</div>'; return; }
+        var body=top.map(function(r){
+          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
+            '<td>'+fmt(r.units)+'</td><td class="bm">'+fmt(r.silver)+'</td><td>'+fmt(r.avg)+'</td></tr>';
+        }).join('');
+        out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Unidades</th><th>Plata movida</th><th>Precio medio</th></tr></thead><tbody>'+body+'</tbody></table>'+
+          '<p class="pnote">Lo más comerciado en '+esc(city)+' en las últimas '+hours+' h (histórico de ventas del juego). Cruzá esto con <b>Transporte</b>: margen alto + volumen alto = la mejor ruta.</p></div>';
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
     // ---------- tabs (genérico) ----------
     document.querySelector('.tabs').addEventListener('click',function(ev){
       var b=ev.target.closest('.tab'); if(!b) return;
       document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
       var tab=b.dataset.tab;
-      document.querySelectorAll('#tab-precios,#tab-refinado,#tab-transporte,#tab-mn,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      document.querySelectorAll('#tab-precios,#tab-refinado,#tab-transporte,#tab-mn,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
       if(tab==='oro' && !goldLoaded){ goldLoaded=true; loadGold(); }
     });
 
