@@ -136,6 +136,7 @@
       <button class="tab on" data-tab="plan">Plan</button>
       <button class="tab" data-tab="precios">Precios</button>
       <button class="tab" data-tab="refinado">Refinado</button>
+      <button class="tab" data-tab="craft">Crafteo</button>
       <button class="tab" data-tab="transporte">Transporte</button>
       <button class="tab" data-tab="mn">Mercado Negro</button>
       <button class="tab" data-tab="mov">Movimiento</button>
@@ -190,6 +191,15 @@
         <button class="btn2" id="ref-go">Calcular</button>
       </div>
       <div id="ref-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Elegí un recurso y la ciudad donde refinás (por defecto, la del bono ★). Te calculo el beneficio por tier, con y sin foco, con impuestos incluidos.</p></div>
+    </section>
+
+    <section id="tab-craft" hidden>
+      <p class="desc"><b>Craftear para vender.</b> Con las recetas reales del juego, te calculo qué equipo conviene craftear y venderle al Mercado Negro. Tip: crafteá en la ciudad con especialización de esa línea (más retorno) y usá foco si podés.</p>
+      <div class="controls" style="margin-top:2px">
+        <div><label>Retorno de recursos</label><select id="craft-rrr"><option value="0.248">Ciudad con bono (24,8%)</option><option value="0.479">Con bono + foco (47,9%)</option></select></div>
+        <button class="btn2" id="craft-go">Escanear crafteo → Mercado Negro</button>
+      </div>
+      <div id="craft-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Te muestro qué equipo conviene craftear y venderle al Mercado Negro de Caerleon.</p></div>
     </section>
 
     <section id="tab-transporte" hidden>
@@ -601,6 +611,37 @@
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
+    // ---------- CRAFTEO ----------
+    var RECIPES=null;
+    $('craft-go').addEventListener('click',runCraft);
+    function runCraft(){
+      var out=$('craft-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Cargando recetas y precios…</div>';
+      var load = RECIPES ? Promise.resolve(RECIPES) : fetch('recipes.json').then(function(r){return r.json();}).then(function(j){ RECIPES=j; return j; });
+      load.then(function(REC){
+        var rrr=+$('craft-rrr').value, instFee=instFees(STATE.premium);
+        var cands=gearUniverse([4,5,6],[0,1]).filter(function(id){ return REC[id]; });
+        var matSet={}; cands.forEach(function(id){ REC[id].resources.forEach(function(r){ matSet[r.id]=1; }); });
+        return Promise.all([ fetchPricesMulti(Object.keys(matSet), CITIES, 1), fetchPricesMulti(cands, ['Black Market'], 1) ]).then(function(a){
+          if(!Array.isArray(a[0])||!Array.isArray(a[1])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+          var matBest={}; a[0].forEach(function(p){ if(!fresh2(p)) return; if(matBest[p.item_id]==null||p.sell_price_min<matBest[p.item_id]) matBest[p.item_id]=p.sell_price_min; });
+          var bm={}; a[1].forEach(function(p){ if(p.city==='Black Market'&&p.buy_price_max&&(''+p.buy_price_max_date).indexOf(NO_DATE)!==0) bm[p.item_id]=p; });
+          var rows=[];
+          cands.forEach(function(id){ var rc=REC[id], b=bm[id]; if(!b) return;
+            var ret=0,art=0,ok=true;
+            rc.resources.forEach(function(r){ var m=matBest[r.id]; if(m==null){ok=false;return;} if(r.id.indexOf('ARTEFACT')>=0) art+=m*r.count; else ret+=m*r.count; });
+            if(!ok) return;
+            var cost=(ret*(1-rrr)+art+rc.itemValue*0.1125)/(rc.outCount||1);
+            var net=b.buy_price_max*(1-instFee)-cost; if(net<=0) return;
+            rows.push({id:id,cost:cost,mn:b.buy_price_max,net:net,roi:cost>0?net/cost:0,date:b.buy_price_max_date});
+          });
+          if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Ningún crafteo rentable hacia el MN ahora mismo. Probá con foco (más retorno) o en horas pico de PvE, cuando el MN sube sus órdenes.</div>'; return; }
+          rows.sort(function(a,b){ return b.net-a.net; });
+          var body=rows.slice(0,40).map(function(r){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td><td>'+fmt(r.cost)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>'; }).join('');
+          out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Coste craft</th><th>MN paga</th><th>Beneficio/u</th><th>ROI</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table><p class="pnote">Materiales al precio más barato entre ciudades. Crafteá donde tengas especialización de esa línea y llevá el producto a <b>Caerleon</b> (zona roja). El crafteo sale calidad Normal ~69%; las calidades superiores rinden algo más. Retorno usado: '+(rrr*100).toFixed(1)+'%.</p></div>';
+        });
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
     // ---------- PLAN: qué conviene hacer AHORA (data-driven, sin plantillas) ----------
     $('plan-go').addEventListener('click',runPlan);
     function runPlan(){
@@ -646,7 +687,7 @@
       var b=ev.target.closest('.tab'); if(!b) return;
       document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
       var tab=b.dataset.tab;
-      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-transporte,#tab-mn,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-craft,#tab-transporte,#tab-mn,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
       if(tab==='oro' && !goldLoaded){ goldLoaded=true; loadGold(); }
     });
 
