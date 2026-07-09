@@ -132,6 +132,7 @@
     var ITEMS_URL = 'https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json';
     var CITIES = ['Bridgewatch','Fort Sterling','Lymhurst','Martlock','Thetford','Caerleon','Brecilien'];
     var LOCS = CITIES.concat(['Black Market']);
+    var QNAMES = {1:'Normal',2:'Bueno',3:'Notable',4:'Excelente',5:'Obra maestra'};
     var NO_DATE = '0001-01-01';
 
     var ITEMS = [], BYID = {};
@@ -235,8 +236,9 @@
               '<div class="sub">'+esc(e.id)+'</div></div>'+
           '</div>'+
           '<div class="qtabs" id="qtabs">'+[1,2,3,4,5].map(function(q){
-            return '<button class="qtab'+(q===STATE.quality?' on':'')+'" data-q="'+q+'">Calidad '+q+'</button>';
+            return '<button class="qtab'+(q===STATE.quality?' on':'')+'" data-q="'+q+'">'+QNAMES[q]+'</button>';
           }).join('')+'</div>'+
+          '<p style="padding:7px 20px 0;color:var(--faint);font-size:12px">Calidad del item (mejor = más valioso). Casi todo el mercado es <b>Normal</b>.</p>'+
           '<div id="pbody"><div class="loading"><span class="spin"></span>Consultando precios…</div></div>'+
         '</div>';
       $('qtabs').addEventListener('click',function(ev){
@@ -263,6 +265,7 @@
         });
         var minSell = sells.length?Math.min.apply(null,sells):null;
         var maxBuy = buys.length?Math.max.apply(null,buys):null;
+        var hasAny = sells.length || buys.length;
         var tax = STATE.premium?0.04:0.08;
 
         var rows = LOCS.map(function(c){
@@ -282,6 +285,7 @@
         var netHint = minSell? ('Comprando en la ciudad más barata ('+fmt(minSell)+') y vendiendo con orden de venta, tras el impuesto del '+(tax*100)+'% te queda ~'+fmt(minSell*(1-tax))+' de neto por unidad si el precio no se mueve.') : '';
 
         body.innerHTML =
+          (hasAny ? '' : '<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Este item casi no se comercia en <b>'+QNAMES[STATE.quality]+'</b> ahora mismo. Suele pasar con armas de artefacto/Hell, encantamientos altos o ítems poco populares. Probá con un item más común, otra <b>calidad</b> (arriba) u otro <b>servidor</b>.</div>') +
           '<table class="ptable"><thead><tr>'+
             '<th class="city">Ciudad</th><th>Venta mín.</th><th>Compra máx.</th><th>Datos</th>'+
           '</tr></thead><tbody>'+rows+'</tbody></table>'+
