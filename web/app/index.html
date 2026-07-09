@@ -110,6 +110,29 @@
     .spin{display:inline-block;width:18px;height:18px;border:2px solid var(--line2);border-top-color:var(--gold);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
     @keyframes sp{to{transform:rotate(360deg)}}
     .err{margin:16px 0;padding:16px 20px;border:1px solid var(--red);border-radius:12px;background:rgba(204,91,72,.08);color:#f0b6ab;font-size:14px}
+    /* foro / comunidad */
+    .foro-auth{max-width:740px;margin:0 auto 14px;background:var(--iron2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:14px}
+    .foro-auth.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .foro-in{background:var(--iron3);color:var(--text);border:1px solid var(--line2);border-radius:8px;padding:9px 12px;font-family:inherit;font-size:14px;width:100%;outline:none}
+    .foro-in:focus{border-color:var(--gold)}
+    .foro-form{max-width:740px;margin:0 auto 14px;display:grid;gap:8px}
+    .foro-form .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .foro-list{max-width:740px;margin:0 auto 60px;display:grid;gap:10px}
+    .fpost{background:var(--iron2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .12s,transform .12s}
+    .fpost:hover{border-color:var(--gold);transform:translateY(-2px)}
+    .fpost h3{font-family:'Cinzel',serif;font-size:16px;color:var(--text);margin-bottom:3px}
+    .fpost .meta,.fcomment .meta{color:var(--muted);font-size:12.5px}
+    .fdetail{max-width:740px;margin:0 auto 60px}
+    .fbtn{font-family:'Cinzel',serif;font-weight:700;font-size:13px;background:linear-gradient(180deg,var(--goldb),var(--gold));color:#1a1305;border:0;border-radius:8px;padding:9px 18px;cursor:pointer}
+    .fbtn.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted)}
+    .fbtn:disabled{opacity:.5;cursor:default}
+    .fbody{white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:15px;line-height:1.6;margin:10px 0}
+    .fvote{display:inline-flex;align-items:center;gap:8px;margin:8px 0}
+    .fvote button{background:var(--iron3);border:1px solid var(--line2);color:var(--muted);border-radius:8px;width:36px;height:32px;cursor:pointer;font-size:14px}
+    .fvote button.on{border-color:var(--gold);color:var(--gold)}
+    .fcomment{border-top:1px solid var(--line);padding:10px 0}
+    .flink{color:var(--gold);cursor:pointer;font-size:13px}
+    .fmsg{color:var(--muted);font-size:13px;text-align:center;padding:8px}
     footer{border-top:1px solid var(--line);text-align:center;color:var(--faint);font-size:13px;padding:26px 0 34px}
     @media(max-width:640px){
       .ptable th,.ptable td{padding:10px 12px}
@@ -142,9 +165,10 @@
       <button class="tab" data-tab="sniper">Sniper</button>
       <button class="tab" data-tab="mov">Movimiento</button>
       <button class="tab" data-tab="oro">Oro</button>
+      <button class="tab" data-tab="foro">Comunidad</button>
     </div>
 
-    <div class="controls">
+    <div class="controls" id="globalctl">
       <div><label>Servidor</label>
         <select id="server">
           <option value="west">América (West)</option>
@@ -245,6 +269,12 @@
     <section id="tab-oro" hidden>
       <p class="desc"><b>Invertir en oro.</b> El oro se compra y se vende con plata sin impuestos — la inversión "limpia" del juego. Tip: comprá cuando esté por debajo de su media, vendé en los picos.</p>
       <div id="oro-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Precio del oro y señal de compra/venta.</p></div>
+    </section>
+
+    <section id="tab-foro" hidden>
+      <p class="desc"><b>Comunidad.</b> Compartí rutas, dudas y hallazgos con otros jugadores. Creá tu cuenta con email, verificalo y participá. Está moderado para mantenerlo limpio.</p>
+      <div id="foro-auth"></div>
+      <div id="foro-body"></div>
     </section>
   </div>
 
@@ -721,14 +751,121 @@
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
+    // ---------- FORO / COMUNIDAD ----------
+    var fbReady=false, fbAuth=null, fbDb=null, fbUser=null, foroStarted=false;
+    var OWNERS=['jeroobregon03@gmail.com','thiagowendler53@gmail.com'];
+    function loadFirebase(){
+      if(fbReady) return Promise.resolve();
+      if(window._fbP) return window._fbP;
+      window._fbP=new Promise(function(res,rej){
+        var srcs=['app','auth','firestore'].map(function(m){return 'https://www.gstatic.com/firebasejs/10.12.2/firebase-'+m+'-compat.js';});
+        var i=0;(function nx(){ if(i>=srcs.length) return done(); var s=document.createElement('script'); s.src=srcs[i++]; s.onload=nx; s.onerror=function(){rej(new Error('No se pudo cargar Firebase (¿tenés un bloqueador de scripts activo?).'));}; document.head.appendChild(s); })();
+        function done(){ try{
+          firebase.initializeApp({apiKey:'AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU',authDomain:'albionxp-eef13.firebaseapp.com',projectId:'albionxp-eef13'});
+          fbAuth=firebase.auth(); fbDb=firebase.firestore(); fbReady=true;
+          fbAuth.onAuthStateChanged(function(u){ fbUser=u; renderForoAuth(); });
+          res();
+        }catch(e){ rej(e); } }
+      });
+      return window._fbP;
+    }
+    function initForo(){
+      if(foroStarted){ renderForoAuth(); return; }
+      foroStarted=true; $('foro-body').innerHTML='<div class="loading"><span class="spin"></span>Cargando comunidad…</div>';
+      loadFirebase().then(function(){ renderForoAuth(); showForoList(); }).catch(function(e){ foroStarted=false; $('foro-body').innerHTML='<div class="err">'+esc(e.message||String(e))+'</div>'; });
+    }
+    function foroName(){ return (fbUser&&(fbUser.displayName||(fbUser.email||'').split('@')[0]))||'Anónimo'; }
+    function canPost(){ return !!(fbUser&&fbUser.emailVerified); }
+    function isOwner(){ return !!(fbUser&&OWNERS.indexOf(fbUser.email)>=0); }
+    function relTime(d){ if(!d) return ''; var s=(Date.now()-d.getTime())/1000; if(s<60)return'recién'; if(s<3600)return'hace '+Math.floor(s/60)+' min'; if(s<86400)return'hace '+Math.floor(s/3600)+' h'; return 'hace '+Math.floor(s/86400)+' d'; }
+    function tsDate(ts){ return ts&&ts.toDate?ts.toDate():null; }
+    function fbErr(e){ var c=(e&&e.code)||''; if(c.indexOf('email-already')>=0)return'Ese email ya está registrado; probá Entrar.'; if(c.indexOf('wrong-password')>=0||c.indexOf('invalid-cred')>=0||c.indexOf('invalid-login')>=0)return'Email o contraseña incorrectos.'; if(c.indexOf('weak-password')>=0)return'La contraseña necesita al menos 6 caracteres.'; if(c.indexOf('invalid-email')>=0)return'Email inválido.'; if(c.indexOf('too-many')>=0)return'Demasiados intentos; esperá un rato.'; if(c.indexOf('permission-denied')>=0)return'No tenés permiso (¿verificaste tu email?).'; return (e&&e.message)||'Error'; }
+    function foroMsg(t){ var m=$('fa-msg'); if(m) m.textContent=t||''; }
+    function renderForoAuth(){
+      var el=$('foro-auth'); if(!el) return;
+      if(!fbReady){ el.innerHTML=''; return; }
+      if(!fbUser){
+        el.className='foro-form';
+        el.innerHTML='<div class="grid2"><input class="foro-in" id="fa-email" type="email" placeholder="Tu email" autocomplete="email"/><input class="foro-in" id="fa-pass" type="password" placeholder="Contraseña" autocomplete="current-password"/></div>'
+          +'<input class="foro-in" id="fa-name" type="text" placeholder="Nombre para mostrar (solo si te registrás)" maxlength="40"/>'
+          +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="fbtn" id="fa-login">Entrar</button><button class="fbtn ghost" id="fa-reg">Crear cuenta</button><span class="flink" id="fa-reset">¿Olvidaste la contraseña?</span></div><div class="fmsg" id="fa-msg"></div>';
+        $('fa-login').onclick=foroLogin; $('fa-reg').onclick=foroRegister; $('fa-reset').onclick=foroReset;
+      } else if(!fbUser.emailVerified){
+        el.className='foro-auth';
+        el.innerHTML='<b style="color:var(--goldb)">Verificá tu email.</b> Te enviamos un enlace a '+esc(fbUser.email)+'. Abrilo y después tocá «Ya verifiqué».'
+          +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="fbtn" id="fa-check">Ya verifiqué</button><button class="fbtn ghost" id="fa-resend">Reenviar</button><button class="fbtn ghost" id="fa-out">Salir</button></div><div class="fmsg" id="fa-msg"></div>';
+        $('fa-check').onclick=function(){ fbUser.reload().then(function(){ fbUser=fbAuth.currentUser; if(fbUser&&fbUser.emailVerified){ renderForoAuth(); showForoList(); } else foroMsg('Todavía no figura verificado. Revisá tu correo (y la carpeta de spam).'); }); };
+        $('fa-resend').onclick=function(){ fbUser.sendEmailVerification().then(function(){foroMsg('Reenviado.');}).catch(function(e){foroMsg(fbErr(e));}); };
+        $('fa-out').onclick=function(){ fbAuth.signOut(); };
+      } else {
+        el.className='foro-auth row';
+        el.innerHTML='<span>Conectado como <b style="color:var(--goldb)">'+esc(foroName())+'</b>'+(isOwner()?' <span class="badge-r safe">moderador</span>':'')+'</span><button class="fbtn ghost" id="fa-out">Salir</button>';
+        $('fa-out').onclick=function(){ fbAuth.signOut(); showForoList(); };
+      }
+    }
+    function foroLogin(){ var e=($('fa-email').value||'').trim(), p=$('fa-pass').value||''; if(!e||!p){foroMsg('Completá email y contraseña.');return;} foroMsg('Entrando…'); fbAuth.signInWithEmailAndPassword(e,p).then(function(){ foroMsg(''); showForoList(); }).catch(function(x){foroMsg(fbErr(x));}); }
+    function foroRegister(){ var e=($('fa-email').value||'').trim(), p=$('fa-pass').value||'', n=(($('fa-name').value||'').trim()).slice(0,40); if(!e||!p){foroMsg('Completá email y contraseña.');return;} foroMsg('Creando cuenta…'); fbAuth.createUserWithEmailAndPassword(e,p).then(function(cred){ var u=cred.user; return (n?u.updateProfile({displayName:n}):Promise.resolve()).then(function(){ return u.sendEmailVerification(); }); }).then(function(){ foroMsg('¡Cuenta creada! Revisá tu email para verificarla y ya podés publicar.'); }).catch(function(x){foroMsg(fbErr(x));}); }
+    function foroReset(){ var e=($('fa-email').value||'').trim(); if(!e){foroMsg('Escribí tu email arriba y tocá de nuevo.');return;} fbAuth.sendPasswordResetEmail(e).then(function(){foroMsg('Te enviamos un enlace para restablecer la contraseña.');}).catch(function(x){foroMsg(fbErr(x));}); }
+    function showForoList(){
+      var host=$('foro-body'); if(!host) return; host.innerHTML='<div class="loading"><span class="spin"></span>Cargando temas…</div>';
+      var head='<div style="max-width:740px;margin:0 auto 12px;display:flex;justify-content:flex-end">'+(canPost()?'<button class="fbtn" id="f-new">+ Nuevo tema</button>':'')+'</div>';
+      fbDb.collection('posts').orderBy('createdAt','desc').limit(60).get().then(function(qs){
+        var items=[]; qs.forEach(function(d){ var p=d.data(); items.push('<div class="fpost" data-pid="'+d.id+'"><h3>'+esc(p.title||'(sin título)')+'</h3><div class="meta">por '+esc(p.authorName||'—')+' · '+relTime(tsDate(p.createdAt))+'</div></div>'); });
+        host.innerHTML=head+'<div class="foro-list">'+(items.length?items.join(''):'<div class="fmsg">Todavía no hay temas. ¡Escribí el primero!</div>')+'</div>';
+        if($('f-new')) $('f-new').onclick=showForoComposer;
+        [].forEach.call(host.querySelectorAll('.fpost'),function(el){ el.onclick=function(){ showForoPost(el.getAttribute('data-pid')); }; });
+      }).catch(function(e){ host.innerHTML='<div class="err">No se pudieron cargar los temas: '+esc(fbErr(e))+'</div>'; });
+    }
+    function showForoComposer(){
+      if(!canPost()) return; var host=$('foro-body');
+      host.innerHTML='<div class="fdetail"><span class="flink" id="f-back">‹ Volver</span><div class="foro-form" style="margin-top:10px">'
+        +'<input class="foro-in" id="f-title" type="text" placeholder="Título del tema" maxlength="140"/>'
+        +'<textarea class="foro-in" id="f-text" rows="7" placeholder="Escribí tu tema… (rutas, precios, dudas)" maxlength="5000"></textarea>'
+        +'<div><button class="fbtn" id="f-send">Publicar</button></div><div class="fmsg" id="f-msg"></div></div></div>';
+      $('f-back').onclick=showForoList;
+      $('f-send').onclick=function(){ var t=($('f-title').value||'').trim(), b=($('f-text').value||'').trim(); if(t.length<1||b.length<1){ $('f-msg').textContent='Poné un título y un texto.'; return; } $('f-send').disabled=true; $('f-msg').textContent='Publicando…';
+        fbDb.collection('posts').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),title:t.slice(0,140),body:b.slice(0,5000),createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+          .then(function(){ showForoList(); }).catch(function(e){ $('f-send').disabled=false; $('f-msg').textContent=fbErr(e); }); };
+    }
+    function showForoPost(pid){
+      var host=$('foro-body'); host.innerHTML='<div class="loading"><span class="spin"></span>Cargando…</div>';
+      var ref=fbDb.collection('posts').doc(pid);
+      Promise.all([ ref.get(), ref.collection('comments').orderBy('createdAt').limit(200).get(), ref.collection('votes').get() ]).then(function(r){
+        var doc=r[0]; if(!doc.exists){ showForoList(); return; } var p=doc.data();
+        var score=0, myVote=0; r[2].forEach(function(v){ var val=v.data().value||0; score+=val; if(fbUser&&v.id===fbUser.uid) myVote=val; });
+        var comments=[]; r[1].forEach(function(c){ comments.push({id:c.id,d:c.data()}); });
+        var canDelPost=fbUser&&(p.authorUid===fbUser.uid||isOwner());
+        var h='<div class="fdetail"><span class="flink" id="f-back">‹ Volver a los temas</span>';
+        h+='<h2 style="font-family:Cinzel,serif;font-size:22px;margin:10px 0 2px">'+esc(p.title||'')+'</h2>';
+        h+='<div class="meta" style="color:var(--muted);font-size:13px">por '+esc(p.authorName||'—')+' · '+relTime(tsDate(p.createdAt))+(canDelPost?' · <span class="flink" id="f-delpost" style="color:var(--red)">borrar</span>':'')+'</div>';
+        h+='<div class="fbody">'+esc(p.body||'')+'</div>';
+        h+='<div class="fvote"><button id="f-up" class="'+(myVote===1?'on':'')+'" title="Útil">▲</button><b>'+score+'</b><button id="f-down" class="'+(myVote===-1?'on':'')+'" title="No útil">▼</button>'+(canPost()?'':'<span class="fmsg" style="padding:0 8px">Iniciá sesión (email verificado) para votar y comentar</span>')+'</div>';
+        h+='<h3 style="font-family:Cinzel,serif;font-size:15px;margin:18px 0 4px;color:var(--muted)">Comentarios ('+comments.length+')</h3>';
+        h+=comments.map(function(c){ var canDel=fbUser&&(c.d.authorUid===fbUser.uid||isOwner()); return '<div class="fcomment"><div class="meta">'+esc(c.d.authorName||'—')+' · '+relTime(tsDate(c.d.createdAt))+(canDel?' · <span class="flink fdelc" data-cid="'+c.id+'" style="color:var(--red)">borrar</span>':'')+'</div><div class="fbody" style="margin:4px 0 0;font-size:14px">'+esc(c.d.body||'')+'</div></div>'; }).join('');
+        if(canPost()) h+='<div class="foro-form" style="margin-top:14px"><textarea class="foro-in" id="f-ctext" rows="3" placeholder="Escribí un comentario…" maxlength="2000"></textarea><div><button class="fbtn" id="f-csend">Comentar</button></div><div class="fmsg" id="f-cmsg"></div></div>';
+        h+='</div>'; host.innerHTML=h;
+        $('f-back').onclick=showForoList;
+        if($('f-delpost')) $('f-delpost').onclick=function(){ if(!confirm('¿Borrar este tema?'))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
+        var vote=function(val){ if(!canPost())return; var nv=(myVote===val)?0:val; var vref=ref.collection('votes').doc(fbUser.uid); (nv===0?vref.delete():vref.set({value:nv})).then(function(){ showForoPost(pid); }).catch(function(e){ alert(fbErr(e)); }); };
+        if($('f-up')) $('f-up').onclick=function(){vote(1);}; if($('f-down')) $('f-down').onclick=function(){vote(-1);};
+        [].forEach.call(host.querySelectorAll('.fdelc'),function(el){ el.onclick=function(){ if(!confirm('¿Borrar comentario?'))return; ref.collection('comments').doc(el.getAttribute('data-cid')).delete().then(function(){showForoPost(pid);}).catch(function(e){alert(fbErr(e));}); }; });
+        if($('f-csend')) $('f-csend').onclick=function(){ var b=($('f-ctext').value||'').trim(); if(b.length<1){$('f-cmsg').textContent='Escribí algo.';return;} $('f-csend').disabled=true; $('f-cmsg').textContent='Enviando…'; ref.collection('comments').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),body:b.slice(0,2000),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){ showForoPost(pid); }).catch(function(e){ $('f-csend').disabled=false; $('f-cmsg').textContent=fbErr(e); }); };
+      }).catch(function(e){ host.innerHTML='<div class="err">No se pudo cargar el tema: '+esc(fbErr(e))+'</div>'; });
+    }
+
     // ---------- tabs (genérico) ----------
     document.querySelector('.tabs').addEventListener('click',function(ev){
       var b=ev.target.closest('.tab'); if(!b) return;
       document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
       var tab=b.dataset.tab;
-      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-craft,#tab-transporte,#tab-mn,#tab-sniper,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-craft,#tab-transporte,#tab-mn,#tab-sniper,#tab-mov,#tab-oro,#tab-foro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      $('globalctl').style.display = (tab==='foro') ? 'none' : '';
       if(tab==='oro' && !goldLoaded){ goldLoaded=true; loadGold(); }
+      if(tab==='foro') initForo();
     });
+
+    // deep-link: app/#foro abre esa pestaña directo (desde la landing)
+    (function(){ var h=(location.hash||'').replace(/[^a-z]/g,''); if(h){ var b=document.querySelector('.tab[data-tab="'+h+'"]'); if(b) b.click(); } })();
 
     // ---------- controles (compartidos) ----------
     $('server').addEventListener('change',function(){ STATE.server=this.value; goldLoaded=false; if(!$('tab-oro').hidden){ goldLoaded=true; loadGold(); } if(STATE.id) renderPanel(); });
