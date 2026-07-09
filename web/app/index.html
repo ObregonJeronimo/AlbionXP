@@ -38,6 +38,21 @@
     .controls label{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-right:6px}
     select,.chk{background:var(--iron3);color:var(--text);border:1px solid var(--line2);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:14px}
     .chk{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+    /* tabs */
+    .tabs{display:flex;gap:8px;justify-content:center;margin:18px 0 4px;flex-wrap:wrap}
+    .tab{font-family:'Cinzel',serif;font-size:14px;letter-spacing:.04em;background:var(--iron2);color:var(--muted);
+      border:1px solid var(--line2);border-radius:10px;padding:9px 20px;cursor:pointer}
+    .tab:hover{color:var(--goldb);border-color:var(--gold)}
+    .tab.on{background:linear-gradient(180deg,var(--goldb),var(--gold));color:#1a1305;border-color:var(--gold);font-weight:700}
+    .btn2{font-family:'Cinzel',serif;font-weight:700;font-size:14px;background:linear-gradient(180deg,var(--goldb),var(--gold));
+      color:#1a1305;border:0;border-radius:10px;padding:10px 22px;cursor:pointer}
+    .btn2:hover{filter:brightness(1.06)}
+    .recbox{margin:0 0 16px;border:1px solid var(--gold);border-radius:14px;padding:16px 20px;background:rgba(217,164,65,.06)}
+    .recbox h3{font-family:'Cinzel',serif;color:var(--gold);font-size:15px;margin-bottom:6px}
+    .rtable td.txt,.rtable th.txt{text-align:left}
+    .rtable .icell{display:inline-flex;align-items:center;gap:8px}
+    .rtable .icell img{width:30px;height:30px}
+    .pos{color:var(--green)}.neg{color:var(--red)}
     /* search */
     .searchbox{position:relative;max-width:640px;margin:14px auto 0}
     #q{width:100%;background:var(--iron3);color:var(--text);border:1.5px solid var(--line2);border-radius:12px;
@@ -97,8 +112,13 @@
 
   <div class="wrap">
     <div class="intro">
-      <h1>Precios de Albion, en la web</h1>
-      <p>Buscá cualquier item y mirá su precio en cada ciudad y en el Mercado Negro. Sin descargar nada.</p>
+      <h1>Albion Silver Hub — en la web</h1>
+      <p>Herramientas para hacer plata en Albion Online, directo en el navegador. Sin descargar nada.</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on" data-tab="precios">Precios</button>
+      <button class="tab" data-tab="refinado">Refinado</button>
     </div>
 
     <div class="controls">
@@ -112,13 +132,31 @@
       <label class="chk"><input type="checkbox" id="premium" /> Tengo Premium (impuesto 4%)</label>
     </div>
 
-    <div class="searchbox">
-      <svg class="mag" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="text" autocomplete="off" placeholder="Cargando items del juego…" disabled />
-    </div>
+    <section id="tab-precios">
+      <div class="searchbox">
+        <svg class="mag" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="text" autocomplete="off" placeholder="Cargando items del juego…" disabled />
+      </div>
+      <div id="results" class="results"></div>
+      <div id="panel"></div>
+    </section>
 
-    <div id="results" class="results"></div>
-    <div id="panel"></div>
+    <section id="tab-refinado" hidden>
+      <div class="controls" style="margin-top:2px">
+        <div><label>Recurso</label>
+          <select id="ref-res">
+            <option value="ORE">Mineral → Lingotes (bono: Thetford)</option>
+            <option value="WOOD">Madera → Tablones (bono: Fort Sterling)</option>
+            <option value="FIBER">Fibra → Tela (bono: Lymhurst)</option>
+            <option value="HIDE">Piel → Cuero (bono: Martlock)</option>
+            <option value="ROCK">Piedra → Bloques (bono: Bridgewatch)</option>
+          </select>
+        </div>
+        <div><label>Ciudad de refinado</label><select id="ref-city"></select></div>
+        <button class="btn2" id="ref-go">Calcular</button>
+      </div>
+      <div id="ref-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Elegí un recurso y la ciudad donde refinás (por defecto, la del bono ★). Te calculo el beneficio por tier, con y sin foco, con impuestos incluidos.</p></div>
+    </section>
   </div>
 
   <footer>
@@ -297,9 +335,89 @@
       });
     }
 
-    // ---------- controles ----------
-    $('server').addEventListener('change',function(){ STATE.server=this.value; if(STATE.id) renderPanel(); });
-    $('premium').addEventListener('change',function(){ STATE.premium=this.checked; if(STATE.id) renderPanel(); });
+    // ---------- REFINADO ----------
+    var SALES_P=0.04, SALES_N=0.08, SETUP=0.025;
+    function sellFees(p){ return (p?SALES_P:SALES_N)+SETUP; }
+    var REF_CITY={ORE:'Thetford',WOOD:'Fort Sterling',FIBER:'Lymhurst',HIDE:'Martlock',ROCK:'Bridgewatch'};
+    var RRR={base:.1525,city:.3671,baseF:.435,cityF:.539};
+    var REFID={ORE:'METALBAR',WOOD:'PLANKS',FIBER:'CLOTH',HIDE:'LEATHER',ROCK:'STONEBLOCK'};
+    var RESNAME={ORE:'Mineral',WOOD:'Madera',FIBER:'Fibra',HIDE:'Piel',ROCK:'Piedra'};
+    var INP={2:{r:1,p:0},3:{r:2,p:1},4:{r:2,p:1},5:{r:3,p:1},6:{r:4,p:1},7:{r:5,p:1},8:{r:5,p:1}};
+    function refMaxEnch(res,kind){ if(res==='ROCK') return kind==='raw'?3:0; return 4; }
+    function ivalue(t,e){ return 16*Math.pow(2,t+e-4); }
+    function stFee(iv,f){ return iv*0.1125*(f/100); }
+    function rawId(res,t,e){ var b='T'+t+'_'+res; return e>0?b+'_LEVEL'+e+'@'+e:b; }
+    function refId(res,t,e){ var b='T'+t+'_'+REFID[res]; return e>0?b+'_LEVEL'+e+'@'+e:b; }
+    function webName(id){ var e=BYID[id]; var base=e?e.es:id; var tag=tierTag(parseTier(id),parseEnch(id)); return (tag?tag+' ':'')+base; }
+
+    function refCityOpts(){
+      var bonus=REF_CITY[$('ref-res').value];
+      $('ref-city').innerHTML=CITIES.map(function(c){ return '<option'+(c===bonus?' selected':'')+' value="'+c+'">'+c+(c===bonus?' ★ bono':'')+'</option>'; }).join('');
+    }
+    refCityOpts();
+    $('ref-res').addEventListener('change',refCityOpts);
+    $('ref-go').addEventListener('click',runRefine);
+
+    function fetchPricesMulti(ids,city,quality){
+      var seen={},uniq=[]; ids.forEach(function(i){ if(!seen[i]){seen[i]=1;uniq.push(i);} });
+      var loc=city.replace(/ /g,''), chunks=[],cur=[];
+      for(var i=0;i<uniq.length;i++){ cur.push(uniq[i]); if(cur.length>=35){chunks.push(cur);cur=[];} }
+      if(cur.length) chunks.push(cur);
+      return Promise.all(chunks.map(function(c){
+        var path='/api/v2/stats/prices/'+c.map(encodeURIComponent).join(',')+'?locations='+loc+'&qualities='+quality;
+        return fetch(WORKER+'/aodp?server='+STATE.server+'&u='+encodeURIComponent(path)).then(function(r){return r.json();});
+      })).then(function(arrs){ var o=[]; arrs.forEach(function(a){ if(Array.isArray(a)) o=o.concat(a); }); return o; });
+    }
+
+    function runRefine(){
+      var res=$('ref-res').value, city=$('ref-city').value;
+      var out=$('ref-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Consultando precios en '+esc(city)+'…</div>';
+      var isBonus=REF_CITY[res]===city, rrr=isBonus?RRR.city:RRR.base, rrrF=isBonus?RRR.cityF:RRR.baseF;
+      var eMax=Math.min(refMaxEnch(res,'raw'),refMaxEnch(res,'refined')), ids=[];
+      for(var t=2;t<=8;t++){ var em=t>=4?eMax:0; for(var e=0;e<=em;e++){ ids.push(rawId(res,t,e)); ids.push(refId(res,t,e)); } }
+      fetchPricesMulti(ids,city,1).then(function(prices){
+        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">El proxy de precios no respondió (¿falta el redeploy del worker?).</div>'; return; }
+        var byId={}; prices.forEach(function(p){ if(p.city===city) byId[p.item_id]=p; });
+        function sp(id){ var p=byId[id]; if(p && p.sell_price_min && (''+p.sell_price_min_date).indexOf(NO_DATE)!==0) return {price:p.sell_price_min,date:p.sell_price_min_date}; return null; }
+        var feeR=sellFees(STATE.premium), rows=[];
+        for(var t=4;t<=8;t++){ for(var e=0;e<=eMax;e++){
+          var inp=INP[t], raw=sp(rawId(res,t,e));
+          var prev=inp.p?sp(refId(res,t-1,(t-1>=4?e:0))):{price:0};
+          var o=sp(refId(res,t,e));
+          if(!raw||!prev||!o) continue;
+          var matBase=inp.r*raw.price+inp.p*(prev.price||0), fee=stFee(ivalue(t,e),100);
+          var calc=function(rate){ var cost=matBase*(1-rate)+fee; return {cost:cost,net:(o.price-1)*(1-feeR)-cost,roi:cost>0?((o.price-1)*(1-feeR)-cost)/cost:0}; };
+          rows.push({outId:refId(res,t,e),rawP:raw.price,outP:o.price,nf:calc(rrr),f:calc(rrrF),age:dataAge(o.date)});
+        }}
+        if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin datos suficientes de '+esc(RESNAME[res])+' en '+esc(city)+' ahora mismo. Probá otra ciudad o servidor.</div>'; return; }
+        rows.sort(function(a,b){ return b.nf.roi-a.nf.roi; });
+        var best=rows.reduce(function(a,b){ return Math.max(b.nf.net,b.f.net)>Math.max(a.nf.net,a.f.net)?b:a; });
+        var rec=(best.nf.net>0||best.f.net>0)?'<div class="recbox"><h3>Recomendado hoy</h3><p style="font-size:14px;line-height:1.55">Lo que más rinde: refinar <b>'+esc(webName(best.outId))+'</b>'+(isBonus?'':' — pero hacelo en <b>'+REF_CITY[res]+'</b> (la ciudad con bono)')+'. '+(best.nf.net>0?'Ganás <b class="pos">'+fmt(best.nf.net)+'/unidad</b> ('+Math.round(best.nf.roi*100)+'% ROI) sin foco':'Sin foco no es rentable')+(best.f.net>best.nf.net?', o <b class="pos">'+fmt(best.f.net)+'/unidad</b> ('+Math.round(best.f.roi*100)+'%) con foco.':'.')+'</p></div>':'';
+        var bodyRows=rows.map(function(r){
+          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.outId,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.outId))+'</span></td>'+
+            '<td>'+fmt(r.rawP)+'</td><td>'+fmt(r.nf.cost)+'</td><td>'+fmt(r.outP)+'</td>'+
+            '<td class="'+(r.nf.net>0?'pos':'neg')+'">'+fmt(r.nf.net)+'</td><td class="'+(r.nf.net>0?'pos':'neg')+'">'+Math.round(r.nf.roi*100)+'%</td>'+
+            '<td class="'+(r.f.net>0?'pos':'neg')+'">'+fmt(r.f.net)+'</td><td class="'+(r.f.net>0?'pos':'neg')+'">'+Math.round(r.f.roi*100)+'%</td>'+
+            '<td class="age">'+ageTxt(r.age)+'</td></tr>';
+        }).join('');
+        out.innerHTML=rec+'<div class="panel"><table class="ptable rtable"><thead><tr>'+
+          '<th class="txt">Producto</th><th>Materia</th><th>Coste/u</th><th>Venta</th><th>Benef./u</th><th>ROI</th><th>Con foco</th><th>ROI foco</th><th>Datos</th>'+
+          '</tr></thead><tbody>'+bodyRows+'</tbody></table>'+
+          '<p class="pnote">Coste = materias × (1 − retorno '+(rrr*100).toFixed(1)+'%) + tarifa de estación, ya con impuesto de venta ('+(feeR*100).toFixed(1)+'%). El retorno de recursos actúa como descuento. '+(STATE.premium?'':'Marcá "Premium" arriba si tenés premium.')+'</p></div>';
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
+    // ---------- tabs ----------
+    document.querySelector('.tabs').addEventListener('click',function(ev){
+      var b=ev.target.closest('.tab'); if(!b) return;
+      document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
+      $('tab-precios').hidden = b.dataset.tab!=='precios';
+      $('tab-refinado').hidden = b.dataset.tab!=='refinado';
+    });
+
+    // ---------- controles (compartidos entre pestañas) ----------
+    $('server').addEventListener('change',function(){ STATE.server=this.value; if(STATE.id) renderPanel(); if(!$('tab-refinado').hidden && $('ref-results').querySelector('.ptable')) runRefine(); });
+    $('premium').addEventListener('change',function(){ STATE.premium=this.checked; if(STATE.id) renderPanel(); if(!$('tab-refinado').hidden && $('ref-results').querySelector('.ptable')) runRefine(); });
   })();
   </script>
 </body>
