@@ -53,6 +53,22 @@
     .rtable .icell{display:inline-flex;align-items:center;gap:8px}
     .rtable .icell img{width:30px;height:30px}
     .pos{color:var(--green)}.neg{color:var(--red)}
+    .desc{max-width:740px;margin:2px auto 14px;text-align:center;color:var(--muted);font-size:14px;line-height:1.55}
+    .desc b{color:var(--goldb)}
+    .plan-recs{display:grid;gap:12px;margin-top:4px}
+    .prec{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--iron2);display:flex;gap:14px;align-items:center}
+    .prec.top{border-color:var(--gold);background:rgba(217,164,65,.06)}
+    .prec img{width:46px;height:46px;flex:0 0 auto}
+    .prec .body{flex:1;min-width:0}
+    .prec .mtag{font-family:'Cinzel',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+    .prec .ti{font-weight:700;color:var(--text);font-size:15px;margin:1px 0 3px}
+    .prec .dt{color:var(--muted);font-size:13.5px}
+    .prec .num{text-align:right;flex:0 0 auto}
+    .prec .num .p{font-family:'Cinzel',serif;font-size:20px;font-weight:700;color:var(--green)}
+    .prec .num .r{font-size:12px;color:var(--muted)}
+    .badge-r{display:inline-block;font-size:11px;padding:1px 7px;border-radius:5px;margin-left:6px;vertical-align:1px}
+    .badge-r.safe{background:rgba(127,176,105,.15);color:var(--green);border:1px solid rgba(127,176,105,.4)}
+    .badge-r.risk{background:rgba(204,91,72,.15);color:var(--red);border:1px solid rgba(204,91,72,.4)}
     /* search */
     .searchbox{position:relative;max-width:640px;margin:14px auto 0}
     #q{width:100%;background:var(--iron3);color:var(--text);border:1.5px solid var(--line2);border-radius:12px;
@@ -117,7 +133,8 @@
     </div>
 
     <div class="tabs">
-      <button class="tab on" data-tab="precios">Precios</button>
+      <button class="tab on" data-tab="plan">Plan</button>
+      <button class="tab" data-tab="precios">Precios</button>
       <button class="tab" data-tab="refinado">Refinado</button>
       <button class="tab" data-tab="transporte">Transporte</button>
       <button class="tab" data-tab="mn">Mercado Negro</button>
@@ -136,7 +153,19 @@
       <label class="chk"><input type="checkbox" id="premium" /> Tengo Premium (impuesto 4%)</label>
     </div>
 
-    <section id="tab-precios">
+    <section id="tab-plan">
+      <p class="desc"><b>Qué te conviene hacer AHORA.</b> Escaneamos el mercado en vivo y rankeamos las mejores oportunidades reales del momento (transporte + mercado negro) según tu capital. No son plantillas: cambia todo el tiempo con el mercado.</p>
+      <div class="controls" style="margin-top:2px">
+        <div><label>¿Cuánto capital tenés?</label>
+          <select id="plan-cap"><option value="200000">200 mil (empezando)</option><option value="1000000" selected>1 millón</option><option value="5000000">5 millones</option><option value="20000000">20 millones</option></select>
+        </div>
+        <button class="btn2" id="plan-go">Ver qué conviene ahora</button>
+      </div>
+      <div id="plan-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Elegí tu capital y te digo, con datos reales de este momento, las mejores jugadas para ganar plata.</p></div>
+    </section>
+
+    <section id="tab-precios" hidden>
+      <p class="desc"><b>Compará precios.</b> Buscá un item y mirá su precio en cada ciudad y en el Mercado Negro. Tip: verde = dónde comprarlo más barato · rojo = dónde venderlo más caro.</p>
       <div class="searchbox">
         <svg class="mag" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="q" type="text" autocomplete="off" placeholder="Cargando items del juego…" disabled />
@@ -146,6 +175,7 @@
     </section>
 
     <section id="tab-refinado" hidden>
+      <p class="desc"><b>Refiná para ganar.</b> Comprás materia prima, la refinás en la ciudad con bono ★ y vendés el producto. Tip: si tenés <b>foco</b>, usalo — el retorno casi se duplica.</p>
       <div class="controls" style="margin-top:2px">
         <div><label>Recurso</label>
           <select id="ref-res">
@@ -163,6 +193,7 @@
     </section>
 
     <section id="tab-transporte" hidden>
+      <p class="desc"><b>Arbitraje entre ciudades.</b> Comprás barato en una ciudad y vendés caro en otra. Tip: si la ruta pasa por Caerleon (⚠ zona roja) y llevás mucho, cuidado con que te maten.</p>
       <div class="controls" style="margin-top:2px">
         <button class="btn2" id="flip-go">Buscar rutas de transporte</button>
         <span style="color:var(--faint);font-size:13px">Compara recursos, comida y pociones entre las 7 ciudades. Tarda unos segundos.</span>
@@ -171,6 +202,7 @@
     </section>
 
     <section id="tab-mn" hidden>
+      <p class="desc"><b>Vender al Mercado Negro.</b> El MN de Caerleon suele pagar por equipo más caro que las ciudades. Tip: es zona roja — llevá montura rápida y no cargues de más.</p>
       <div class="controls" style="margin-top:2px">
         <button class="btn2" id="mn-go">Escanear Mercado Negro</button>
         <span style="color:var(--faint);font-size:13px">Equipo que el MN de Caerleon paga más caro que su precio en ciudad. Tarda unos segundos.</span>
@@ -179,6 +211,7 @@
     </section>
 
     <section id="tab-mov" hidden>
+      <p class="desc"><b>Dónde hay demanda.</b> Qué se comercia más en cada mercado ahora mismo. Tip: cruzalo con Transporte — margen alto + volumen alto = la mejor ruta.</p>
       <div class="controls" style="margin-top:2px">
         <div><label>Ciudad</label><select id="vol-city"></select></div>
         <div><label>Ventana</label><select id="vol-window"><option value="24" selected>Últimas 24 h</option><option value="48">Últimas 48 h</option><option value="168">Últimos 7 días</option></select></div>
@@ -188,6 +221,7 @@
     </section>
 
     <section id="tab-oro" hidden>
+      <p class="desc"><b>Invertir en oro.</b> El oro se compra y se vende con plata sin impuestos — la inversión "limpia" del juego. Tip: comprá cuando esté por debajo de su media, vendé en los picos.</p>
       <div id="oro-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Precio del oro y señal de compra/venta.</p></div>
     </section>
   </div>
@@ -567,12 +601,52 @@
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
+    // ---------- PLAN: qué conviene hacer AHORA (data-driven, sin plantillas) ----------
+    $('plan-go').addEventListener('click',runPlan);
+    function runPlan(){
+      var cap=+$('plan-cap').value;
+      var out=$('plan-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el mercado en vivo (transporte y mercado negro)… puede tardar unos segundos.</div>';
+      var feeR=sellFees(STATE.premium), instFee=instFees(STATE.premium), gear=gearUniverse([4,5,6],[0,1]);
+      Promise.all([ fetchPricesMulti(liquidUniverse(), CITIES, 1), fetchPricesMulti(gear, CITIES, 1), fetchPricesMulti(gear, ['Black Market'], 1) ]).then(function(a){
+        if(!Array.isArray(a[0])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        var ops=[], byItem={};
+        a[0].forEach(function(p){ if(!fresh2(p)) return; (byItem[p.item_id]=byItem[p.item_id]||[]).push({city:p.city,sell:p.sell_price_min,date:p.sell_price_min_date}); });
+        Object.keys(byItem).forEach(function(id){ var rows=byItem[id], buy=null,sel=null;
+          rows.forEach(function(x){ if(!buy||x.sell<buy.sell) buy=x; });
+          rows.forEach(function(y){ if(y.city!==buy.city&&(!sel||y.sell>sel.sell)) sel=y; });
+          if(!buy||!sel) return; var net=(sel.sell-1)*(1-feeR)-buy.sell; if(net<=0) return; var roi=net/buy.sell; if(roi<0.1) return;
+          ops.push({m:'Transporte',id:id,net:net,roi:roi,cap:buy.sell,risk:(buy.city==='Caerleon'||sel.city==='Caerleon'),dt:'Comprá en '+buy.city+' ('+fmt(buy.sell)+') y vendé en '+sel.city+' ('+fmt(sel.sell)+')'});
+        });
+        if(Array.isArray(a[1])&&Array.isArray(a[2])){
+          var cheap={}; a[1].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city}; });
+          a[2].forEach(function(p){ if(p.city!=='Black Market'||!p.buy_price_max||(''+p.buy_price_max_date).indexOf(NO_DATE)===0) return; var c=cheap[p.item_id]; if(!c) return; var net=p.buy_price_max*(1-instFee)-c.sell; if(net<=2000) return;
+            ops.push({m:'Mercado Negro',id:p.item_id,net:net,roi:net/c.sell,cap:c.sell,risk:true,dt:'Comprá en '+c.city+' ('+fmt(c.sell)+') y el MN de Caerleon paga '+fmt(p.buy_price_max)});
+          });
+        }
+        if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">No hay oportunidades claras ahora mismo. Probá otro servidor o volvé en un rato — el mercado cambia todo el tiempo.</div>'; return; }
+        ops.sort(function(x,y){ return y.roi-x.roi; });
+        var top=ops.slice(0,14), lowCap=cap<500000;
+        var tip=lowCap?'Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.':'Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).';
+        var cards=top.map(function(o,i){
+          var per=Math.max(1,Math.min(200,Math.floor(cap/Math.max(1,o.cap))));
+          return '<div class="prec'+(i===0?' top':'')+'">'+
+            '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
+            '<div class="body"><div class="mtag">'+o.m+(i===0?' · Recomendado ahora':'')+'</div>'+
+              '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?'zona roja':'seguro')+'</span></div>'+
+              '<div class="dt">'+esc(o.dt)+'</div></div>'+
+            '<div class="num"><div class="p">+'+fmt(o.net)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · x'+fmt(per)+' ≈ '+fmt(o.net*per)+'</div></div></div>';
+        }).join('');
+        out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
+          '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' Netos tras impuesto y con datos en vivo — verificá precio y volumen en el juego antes de invertir fuerte. "x N ≈" = ganancia aprox. con tu capital. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).</p>';
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
     // ---------- tabs (genérico) ----------
     document.querySelector('.tabs').addEventListener('click',function(ev){
       var b=ev.target.closest('.tab'); if(!b) return;
       document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
       var tab=b.dataset.tab;
-      document.querySelectorAll('#tab-precios,#tab-refinado,#tab-transporte,#tab-mn,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-transporte,#tab-mn,#tab-mov,#tab-oro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
       if(tab==='oro' && !goldLoaded){ goldLoaded=true; loadGold(); }
     });
 
