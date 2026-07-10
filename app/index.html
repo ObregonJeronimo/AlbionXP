@@ -397,7 +397,7 @@
       var q=$('q'); q.disabled=false; q.placeholder=L('Buscá un item (ej: espada, lingote, bolsa…)','Search an item (e.g. sword, bar, bag…)'); q.focus();
       renderFavs();
     }).catch(function(){
-      $('q').placeholder='No se pudieron cargar los items — recargá la página.';
+      $('q').placeholder=L('No se pudieron cargar los items — recargá la página.','Could not load items — reload the page.');
     });
 
     function search(query, limit){
@@ -484,7 +484,7 @@
             return '<button class="qtab'+(q===STATE.quality?' on':'')+'" data-q="'+q+'">'+QNAMES[q]+'</button>';
           }).join('')+'</div>'+
           '<p style="padding:7px 20px 0;color:var(--faint);font-size:12px">Calidad del item (mejor = más valioso). Casi todo el mercado es <b>Normal</b>.</p>'+
-          '<div id="pbody"><div class="loading"><span class="spin"></span>Consultando precios…</div></div>'+
+          '<div id="pbody"><div class="loading"><span class="spin"></span>'+L('Consultando precios…','Fetching prices…')+'</div></div>'+
         '</div>';
       $('qtabs').addEventListener('click',function(ev){
         var b=ev.target.closest('.qtab'); if(!b) return;
@@ -498,7 +498,7 @@
       var body=$('pbody');
       fetchPrices(e.id, STATE.quality).then(function(data){
         if(!Array.isArray(data)){
-          body.innerHTML='<div class="err">El proxy de precios todavía no está activo. (Hay que hacer el redeploy del worker: <code>npx wrangler deploy</code> en backend/worker.)</div>';
+          body.innerHTML='<div class="err">'+L('El proxy de precios todavía no está activo. (Hay que hacer el redeploy del worker: <code>npx wrangler deploy</code> en backend/worker.)','The price proxy is not active yet. (You need to redeploy the worker: <code>npx wrangler deploy</code> in backend/worker.)')+'</div>';
           return;
         }
         var byCity={};
@@ -528,18 +528,18 @@
           '</tr>';
         }).join('');
 
-        var netHint = minSell? ('Comprando en la ciudad más barata ('+fmt(minSell)+') y vendiendo con orden de venta, tras el impuesto del '+(tax*100)+'% te queda ~'+fmt(minSell*(1-tax))+' de neto por unidad si el precio no se mueve.') : '';
+        var netHint = minSell? (L('Comprando en la ciudad más barata (','Buying in the cheapest city (')+fmt(minSell)+L(') y vendiendo con orden de venta, tras el impuesto del ',') and selling with a sell order, after the ')+(tax*100)+L('% te queda ~','% tax you keep ~')+fmt(minSell*(1-tax))+L(' de neto por unidad si el precio no se mueve.',' net per unit if the price doesn\'t move.')) : '';
 
         body.innerHTML =
-          (hasAny ? '' : '<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Este item casi no se comercia en <b>'+QNAMES[STATE.quality]+'</b> ahora mismo. Suele pasar con armas de artefacto/Hell, encantamientos altos o ítems poco populares. Probá con un item más común, otra <b>calidad</b> (arriba) u otro <b>servidor</b>.</div>') +
+          (hasAny ? '' : '<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Este item casi no se comercia en <b>','This item is barely traded in <b>')+QNAMES[STATE.quality]+L('</b> ahora mismo. Suele pasar con armas de artefacto/Hell, encantamientos altos o ítems poco populares. Probá con un item más común, otra <b>calidad</b> (arriba) u otro <b>servidor</b>.','</b> quality right now. This usually happens with artifact/Hell weapons, high enchantments or unpopular items. Try a more common item, another <b>quality</b> (above) or another <b>server</b>.')+'</div>') +
           '<div class="tw"><table class="ptable"><thead><tr>'+
-            '<th class="city">Ciudad</th><th>Venta mín.</th><th>Compra máx.</th><th>Datos</th>'+
+            '<th class="city">'+L('Ciudad','City')+'</th><th>'+L('Venta mín.','Min. sell')+'</th><th>'+L('Compra máx.','Max. buy')+'</th><th>'+L('Datos','Data')+'</th>'+
           '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-          '<p class="pnote">Verde = venta más barata · Rojo = compra más cara (mejor para vender al instante). '+
-          'Los precios los aporta la comunidad y pueden estar viejos: mirá la columna "Datos". '+(STATE.premium?'':'Marcá "Premium" arriba si tenés la cuenta premium.')+
+          '<p class="pnote">'+L('Verde = venta más barata · Rojo = compra más cara (mejor para vender al instante). ','Green = cheapest sell · Red = highest buy (best to sell instantly). ')+
+          L('Los precios los aporta la comunidad y pueden estar viejos: mirá la columna "Datos". ','Prices are crowd-sourced and may be old: check the "Data" column. ')+(STATE.premium?'':L('Marcá "Premium" arriba si tenés la cuenta premium.','Check "Premium" above if you have a premium account.'))+
           (netHint?'<br>'+netHint:'')+'</p>';
       }).catch(function(err){
-        body.innerHTML='<div class="err">No se pudieron cargar los precios: '+esc(err.message||String(err))+'</div>';
+        body.innerHTML='<div class="err">'+L('No se pudieron cargar los precios: ','Could not load prices: ')+esc(err.message||String(err))+'</div>';
       });
     }
 
@@ -549,7 +549,7 @@
     var REF_CITY={ORE:'Thetford',WOOD:'Fort Sterling',FIBER:'Lymhurst',HIDE:'Martlock',ROCK:'Bridgewatch'};
     var RRR={base:.1525,city:.3671,baseF:.435,cityF:.539};
     var REFID={ORE:'METALBAR',WOOD:'PLANKS',FIBER:'CLOTH',HIDE:'LEATHER',ROCK:'STONEBLOCK'};
-    var RESNAME={ORE:'Mineral',WOOD:'Madera',FIBER:'Fibra',HIDE:'Piel',ROCK:'Piedra'};
+    var RESNAME={ORE:L('Mineral','Ore'),WOOD:L('Madera','Wood'),FIBER:L('Fibra','Fiber'),HIDE:L('Piel','Hide'),ROCK:L('Piedra','Stone')};
     var INP={2:{r:1,p:0},3:{r:2,p:1},4:{r:2,p:1},5:{r:3,p:1},6:{r:4,p:1},7:{r:5,p:1},8:{r:5,p:1}};
     function refMaxEnch(res,kind){ if(res==='ROCK') return kind==='raw'?3:0; return 4; }
     function ivalue(t,e){ return 16*Math.pow(2,t+e-4); }
@@ -560,7 +560,7 @@
 
     function refCityOpts(){
       var bonus=REF_CITY[$('ref-res').value];
-      $('ref-city').innerHTML=CITIES.map(function(c){ return '<option'+(c===bonus?' selected':'')+' value="'+c+'">'+c+(c===bonus?' ★ bono':'')+'</option>'; }).join('');
+      $('ref-city').innerHTML=CITIES.map(function(c){ return '<option'+(c===bonus?' selected':'')+' value="'+c+'">'+c+(c===bonus?L(' ★ bono',' ★ bonus'):'')+'</option>'; }).join('');
     }
     refCityOpts();
     $('ref-res').addEventListener('change',refCityOpts);
@@ -581,12 +581,12 @@
 
     function runRefine(){
       var res=$('ref-res').value, city=$('ref-city').value;
-      var out=$('ref-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Consultando precios en '+esc(city)+'…</div>';
+      var out=$('ref-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Consultando precios en ','Fetching prices in ')+esc(city)+'…</div>';
       var isBonus=REF_CITY[res]===city, rrr=isBonus?RRR.city:RRR.base, rrrF=isBonus?RRR.cityF:RRR.baseF;
       var eMax=Math.min(refMaxEnch(res,'raw'),refMaxEnch(res,'refined')), ids=[];
       for(var t=2;t<=8;t++){ var em=t>=4?eMax:0; for(var e=0;e<=em;e++){ ids.push(rawId(res,t,e)); ids.push(refId(res,t,e)); } }
       fetchPricesMulti(ids,city,1).then(function(prices){
-        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">El proxy de precios no respondió (¿falta el redeploy del worker?).</div>'; return; }
+        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió (¿falta el redeploy del worker?).','The price proxy did not respond (did you redeploy the worker?).')+'</div>'; return; }
         var byId={}; prices.forEach(function(p){ if(p.city===city) byId[p.item_id]=p; });
         function sp(id){ var p=byId[id]; if(p && p.sell_price_min && (''+p.sell_price_min_date).indexOf(NO_DATE)!==0) return {price:p.sell_price_min,date:p.sell_price_min_date}; return null; }
         var feeR=sellFees(STATE.premium), rows=[];
@@ -599,10 +599,10 @@
           var calc=function(rate){ var cost=matBase*(1-rate)+fee; return {cost:cost,net:(o.price-1)*(1-feeR)-cost,roi:cost>0?((o.price-1)*(1-feeR)-cost)/cost:0}; };
           rows.push({outId:refId(res,t,e),rawP:raw.price,outP:o.price,nf:calc(rrr),f:calc(rrrF),age:dataAge(o.date)});
         }}
-        if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin datos suficientes de '+esc(RESNAME[res])+' en '+esc(city)+' ahora mismo. Probá otra ciudad o servidor.</div>'; return; }
+        if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Sin datos suficientes de ','Not enough data for ')+esc(RESNAME[res])+L(' en ',' in ')+esc(city)+L(' ahora mismo. Probá otra ciudad o servidor.',' right now. Try another city or server.')+'</div>'; return; }
         rows.sort(function(a,b){ return b.nf.roi-a.nf.roi; });
         var best=rows.reduce(function(a,b){ return Math.max(b.nf.net,b.f.net)>Math.max(a.nf.net,a.f.net)?b:a; });
-        var rec=(best.nf.net>0||best.f.net>0)?'<div class="recbox"><h3>Recomendado hoy</h3><p style="font-size:14px;line-height:1.55">Lo que más rinde: refinar <b>'+esc(webName(best.outId))+'</b>'+(isBonus?'':' — pero hacelo en <b>'+REF_CITY[res]+'</b> (la ciudad con bono)')+'. '+(best.nf.net>0?'Ganás <b class="pos">'+fmt(best.nf.net)+'/unidad</b> ('+Math.round(best.nf.roi*100)+'% ROI) sin foco':'Sin foco no es rentable')+(best.f.net>best.nf.net?', o <b class="pos">'+fmt(best.f.net)+'/unidad</b> ('+Math.round(best.f.roi*100)+'%) con foco.':'.')+'</p></div>':'';
+        var rec=(best.nf.net>0||best.f.net>0)?'<div class="recbox"><h3>'+L('Recomendado hoy','Recommended today')+'</h3><p style="font-size:14px;line-height:1.55">'+L('Lo que más rinde: refinar ','Best value: refine ')+'<b>'+esc(webName(best.outId))+'</b>'+(isBonus?'':L(' — pero hacelo en <b>',' — but do it in <b>')+REF_CITY[res]+L('</b> (la ciudad con bono)','</b> (the bonus city)'))+'. '+(best.nf.net>0?L('Ganás <b class="pos">','You make <b class="pos">')+fmt(best.nf.net)+L('/unidad</b> (','/unit</b> (')+Math.round(best.nf.roi*100)+L('% ROI) sin foco','% ROI) without focus'):L('Sin foco no es rentable','Not profitable without focus'))+(best.f.net>best.nf.net?L(', o <b class="pos">',', or <b class="pos">')+fmt(best.f.net)+L('/unidad</b> (','/unit</b> (')+Math.round(best.f.roi*100)+L('%) con foco.','%) with focus.'):'.')+'</p></div>':'';
         var bodyRows=rows.map(function(r){
           return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.outId,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.outId))+'</span></td>'+
             '<td>'+fmt(r.rawP)+'</td><td>'+fmt(r.nf.cost)+'</td><td>'+fmt(r.outP)+'</td>'+
@@ -611,9 +611,9 @@
             '<td class="age">'+ageTxt(r.age)+'</td></tr>';
         }).join('');
         out.innerHTML=rec+'<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr>'+
-          '<th class="txt">Producto</th><th>Materia</th><th>Coste/u</th><th>Venta</th><th>Benef./u</th><th>ROI</th><th>Con foco</th><th>ROI foco</th><th>Datos</th>'+
+          '<th class="txt">'+L('Producto','Product')+'</th><th>'+L('Materia','Raw mat.')+'</th><th>'+L('Coste/u','Cost/u')+'</th><th>'+L('Venta','Sell')+'</th><th>'+L('Benef./u','Profit/u')+'</th><th>ROI</th><th>'+L('Con foco','With focus')+'</th><th>'+L('ROI foco','ROI focus')+'</th><th>'+L('Datos','Data')+'</th>'+
           '</tr></thead><tbody>'+bodyRows+'</tbody></table></div>'+
-          '<p class="pnote">Coste = materias × (1 − retorno '+(rrr*100).toFixed(1)+'%) + tarifa de estación, ya con impuesto de venta ('+(feeR*100).toFixed(1)+'%). El retorno de recursos actúa como descuento. '+(STATE.premium?'':'Marcá "Premium" arriba si tenés premium.')+'</p></div>';
+          '<p class="pnote">'+L('Coste = materias × (1 − retorno ','Cost = materials × (1 − return ')+(rrr*100).toFixed(1)+L('%) + tarifa de estación, ya con impuesto de venta (','%) + station fee, already with sales tax (')+(feeR*100).toFixed(1)+L('%). El retorno de recursos actúa como descuento. ','%). The resource return acts as a discount. ')+(STATE.premium?'':L('Marcá "Premium" arriba si tenés premium.','Check "Premium" above if you have premium.'))+'</p></div>';
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
@@ -636,9 +636,9 @@
     // ---------- TRANSPORTE / FLIP ----------
     $('flip-go').addEventListener('click',runFlip);
     function runFlip(){
-      var out=$('flip-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Comparando precios y validando contra el histórico real…</div>';
+      var out=$('flip-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Comparando precios y validando contra el histórico real…','Comparing prices and validating against real history…')+'</div>';
       fetchPricesMulti(liquidUniverse(), CITIES, 1).then(function(prices){
-        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió.','The price proxy did not respond.')+'</div>'; return; }
         var feeR=sellFees(STATE.premium), byItem={};
         prices.forEach(function(p){ if(!fresh2(p)) return; (byItem[p.item_id]=byItem[p.item_id]||[]).push({city:p.city,sell:p.sell_price_min,date:p.sell_price_min_date}); });
         var routes=[];
@@ -659,7 +659,7 @@
           var hist={},haveHist=false; res.forEach(function(r){ Object.keys(r.m).forEach(function(id){ hist[r.city+'|'+id]=r.m[id]; haveHist=true; }); });
           var valid=cand.filter(function(r){ var h=hist[r.sc+'|'+r.id]; if(!h) return !haveHist && r.sp<=r.bp*8; r.vol=h.vol; if(r.sp>h.med*2.5) return false; return true; });
           var top=(valid.length?valid:cand.filter(function(r){ return r.sp<=r.bp*8; })).slice(0,25);
-          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin rutas <b>reales</b> ahora mismo (descartamos precios inventados). Probá otro servidor o volvé más tarde.</div>'; return; }
+          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Sin rutas <b>reales</b> ahora mismo (descartamos precios inventados). Probá otro servidor o volvé más tarde.','No <b>real</b> routes right now (we filtered out made-up prices). Try another server or come back later.')+'</div>'; return; }
           var body=top.map(function(r){
             var warn=(r.bc==='Caerleon'||r.sc==='Caerleon')?' <span style="color:var(--red)">⚠</span>':'';
             var vol=r.vol!=null?(fmt(Math.round(r.vol))+'/día'):'s/d';
@@ -667,8 +667,8 @@
               '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="txt">'+esc(r.sc)+' · '+fmt(r.sp)+warn+'</td>'+
               '<td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td>'+vol+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
           }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th class="txt">Vender en</th><th>Benef./u</th><th>ROI</th><th>Vendidos</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
-            '<p class="pnote">Comprás en la ciudad más barata y vendés en la más cara, tras impuesto ('+(feeR*100).toFixed(1)+'%). <b>Validado contra el histórico</b> (mediana y volumen de 7 días) para filtrar precios inventados. "Vendidos" = unidades/día que se mueven en la ciudad de venta (más = más fácil de vender). <span style="color:var(--red)">⚠</span> = pasa por Caerleon (zona roja: podés morir con la carga).</p></div>';
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">'+L('Comprar en','Buy in')+'</th><th class="txt">'+L('Vender en','Sell in')+'</th><th>'+L('Benef./u','Profit/u')+'</th><th>ROI</th><th>'+L('Vendidos','Sold')+'</th><th>'+L('Datos','Data')+'</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+            '<p class="pnote">'+L('Comprás en la ciudad más barata y vendés en la más cara, tras impuesto (','Buy in the cheapest city and sell in the priciest, after tax (')+(feeR*100).toFixed(1)+L('%). <b>Validado contra el histórico</b> (mediana y volumen de 7 días) para filtrar precios inventados. "Vendidos" = unidades/día que se mueven en la ciudad de venta (más = más fácil de vender). <span style="color:var(--red)">⚠</span> = pasa por Caerleon (zona roja: podés morir con la carga).','%). <b>Validated against history</b> (7-day median and volume) to filter phantom prices. "Sold" = units/day traded in the sell city (more = easier to sell). <span style="color:var(--red)">⚠</span> = goes through Caerleon (red zone: you can die carrying the load).')+'</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -676,10 +676,10 @@
     // ---------- MERCADO NEGRO ----------
     $('mn-go').addEventListener('click',runMN);
     function runMN(){
-      var out=$('mn-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el Mercado Negro y validando contra el histórico…</div>';
+      var out=$('mn-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Escaneando el Mercado Negro y validando contra el histórico…','Scanning the Black Market and validating against history…')+'</div>';
       var ids=gearUniverse([4,5,6],[0,1]), instFee=instFees(STATE.premium);
       Promise.all([ fetchPricesMulti(ids, CITIES, 1), fetchPricesMulti(ids, ['Black Market'], 1) ]).then(function(a){
-        if(!Array.isArray(a[0])||!Array.isArray(a[1])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        if(!Array.isArray(a[0])||!Array.isArray(a[1])){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió.','The price proxy did not respond.')+'</div>'; return; }
         var cheap={};
         a[0].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city}; });
         var opps=[];
@@ -689,13 +689,13 @@
         fetchHistoryMulti(cand.map(function(o){return o.id;}),'Black Market',24,1).then(function(series){ return medVol(series); }).catch(function(){ return {}; }).then(function(m){
           var valid=cand.filter(function(o){ var h=m[o.id]; if(h){ o.vol=h.vol; return o.mn<=h.med*2.5; } return o.mn<=o.bp*12; });
           var top=(valid.length?valid:cand).slice(0,30);
-          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Nada rentable hacia el MN ahora mismo. El MN sube sus órdenes con la actividad PvE: probá en horas pico u otro servidor.</div>'; return; }
+          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Nada rentable hacia el MN ahora mismo. El MN sube sus órdenes con la actividad PvE: probá en horas pico u otro servidor.','Nothing profitable to the BM right now. The BM raises its orders with PvE activity: try peak hours or another server.')+'</div>'; return; }
           var body=top.map(function(r){ var vol=r.vol!=null?(fmt(Math.round(r.vol))+'/día'):'s/d';
             return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
               '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td>'+vol+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
           }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th>MN paga</th><th>Beneficio/u</th><th>Vendidos MN</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
-            '<p class="pnote">Comprás el equipo barato en la ciudad y lo vendés al instante al Mercado Negro (impuesto '+(instFee*100)+'%), en <b>Caerleon</b> (zona roja): montura rápida y no cargues de más. <b>Validado contra el histórico del MN</b> (mediana + volumen) para filtrar órdenes fantasma. "Vendidos MN" = unidades/día en el Mercado Negro. Base calidad Normal.</p></div>';
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">'+L('Comprar en','Buy in')+'</th><th>'+L('MN paga','BM pays')+'</th><th>'+L('Beneficio/u','Profit/u')+'</th><th>'+L('Vendidos MN','Sold in BM')+'</th><th>'+L('Datos','Data')+'</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+            '<p class="pnote">'+L('Comprás el equipo barato en la ciudad y lo vendés al instante al Mercado Negro (impuesto ','Buy the gear cheap in the city and sell it instantly to the Black Market (tax ')+(instFee*100)+L('%), en <b>Caerleon</b> (zona roja): montura rápida y no cargues de más. <b>Validado contra el histórico del MN</b> (mediana + volumen) para filtrar órdenes fantasma. "Vendidos MN" = unidades/día en el Mercado Negro. Base calidad Normal.','%), in <b>Caerleon</b> (red zone): fast mount and don\'t overload. <b>Validated against BM history</b> (median + volume) to filter phantom orders. "Sold in BM" = units/day in the Black Market. Base Normal quality.')+'</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -703,21 +703,21 @@
     // ---------- ORO ----------
     var goldLoaded=false;
     function loadGold(){
-      var out=$('oro-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Cargando precio del oro…</div>';
+      var out=$('oro-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Cargando precio del oro…','Loading gold price…')+'</div>';
       fetch(WORKER+'/aodp?server='+STATE.server+'&u='+encodeURIComponent('/api/v2/stats/gold.json?count=336')).then(function(r){return r.json();}).then(function(data){
-        if(!Array.isArray(data)||!data.length){ out.innerHTML='<div class="err">Sin datos de oro ahora mismo.</div>'; return; }
+        if(!Array.isArray(data)||!data.length){ out.innerHTML='<div class="err">'+L('Sin datos de oro ahora mismo.','No gold data right now.')+'</div>'; return; }
         var pts=data.slice().reverse(), prices=pts.map(function(p){return p.price;});
         var cur=prices[prices.length-1], mn=Math.min.apply(null,prices), mx=Math.max.apply(null,prices), avg=prices.reduce(function(a,b){return a+b;},0)/prices.length;
         var w=680,h=120, span=(mx-mn)||1;
         var d=prices.map(function(p,i){ var x=(i/(prices.length-1))*w, y=h-((p-mn)/span)*h; return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1); }).join(' ');
-        var dev=cur/avg-1, sig= dev<-0.02?['pos','Por debajo de su media: zona de COMPRA potencial.'] : dev>0.02?['neg','Por encima de su media: zona de VENTA potencial.'] : ['','Pegado a su media: sin señal clara, esperá.'];
+        var dev=cur/avg-1, sig= dev<-0.02?['pos',L('Por debajo de su media: zona de COMPRA potencial.','Below its average: potential BUY zone.')] : dev>0.02?['neg',L('Por encima de su media: zona de VENTA potencial.','Above its average: potential SELL zone.')] : ['',L('Pegado a su media: sin señal clara, esperá.','Right at its average: no clear signal, wait.')];
         function st(k,v,c){ return '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">'+k+'</div><div style="font-family:Cinzel,serif;font-size:26px;font-weight:700;color:'+(c||'var(--gold)')+'">'+v+'</div></div>'; }
         out.innerHTML='<div class="panel"><div style="padding:22px">'+
-          '<div style="display:flex;gap:30px;flex-wrap:wrap;margin-bottom:18px">'+st('Actual',fmt(cur))+st('Media 14d',fmt(avg),'var(--text)')+st('Mín 14d',fmt(mn),'var(--green)')+st('Máx 14d',fmt(mx),'var(--red)')+'</div>'+
+          '<div style="display:flex;gap:30px;flex-wrap:wrap;margin-bottom:18px">'+st(L('Actual','Current'),fmt(cur))+st(L('Media 14d','14d avg'),fmt(avg),'var(--text)')+st(L('Mín 14d','14d min'),fmt(mn),'var(--green)')+st(L('Máx 14d','14d max'),fmt(mx),'var(--red)')+'</div>'+
           '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="width:100%;height:130px;background:var(--iron3);border:1px solid var(--line);border-radius:8px"><path d="'+d+'" fill="none" stroke="var(--gold)" stroke-width="1.5"/></svg>'+
-          '<p class="pnote" style="padding:14px 0 0"><b class="'+sig[0]+'">'+sig[1]+'</b> El oro se compra y vende con plata <b>sin impuestos</b>: es la inversión "limpia" del juego. Señal orientativa según su media de 14 días — sigue tendencias largas, no es para scalping.</p>'+
+          '<p class="pnote" style="padding:14px 0 0"><b class="'+sig[0]+'">'+sig[1]+'</b> '+L('El oro se compra y vende con plata <b>sin impuestos</b>: es la inversión "limpia" del juego. Señal orientativa según su media de 14 días — sigue tendencias largas, no es para scalping.','Gold is bought and sold with silver <b>tax-free</b>: the game\'s "clean" investment. Rough signal based on its 14-day average — follow long trends, it\'s not for scalping.')+'</p>'+
         '</div></div>';
-      }).catch(function(e){ out.innerHTML='<div class="err">Error cargando oro: '+esc(e.message||String(e))+'</div>'; });
+      }).catch(function(e){ out.innerHTML='<div class="err">'+L('Error cargando oro: ','Error loading gold: ')+esc(e.message||String(e))+'</div>'; });
     }
 
     // ---------- MOVIMIENTO (volumen) ----------
@@ -735,9 +735,9 @@
     }
     function runVol(){
       var city=$('vol-city').value, hours=+$('vol-window').value;
-      var out=$('vol-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Descargando histórico de '+esc(city)+'…</div>';
+      var out=$('vol-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Descargando histórico de ','Downloading history for ')+esc(city)+'…</div>';
       fetchHistoryMulti(liquidUniverse(), city, 1, 1).then(function(series){
-        if(!Array.isArray(series)){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        if(!Array.isArray(series)){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió.','The price proxy did not respond.')+'</div>'; return; }
         var cutoff=Date.now()-hours*3600*1000, rows=[];
         series.forEach(function(s){
           var pts=(s.data||[]).filter(function(p){ var iso=''+p.timestamp; var t=Date.parse(iso.slice(-1)==='Z'?iso:iso+'Z'); return t>=cutoff; });
@@ -748,13 +748,13 @@
         });
         rows.sort(function(a,b){ return b.silver-a.silver; });
         var top=rows.slice(0,40);
-        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin actividad registrada en '+esc(city)+' en esa ventana. Los datos los aporta la comunidad; probá otra ciudad o servidor.</div>'; return; }
+        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Sin actividad registrada en ','No recorded activity in ')+esc(city)+L(' en esa ventana. Los datos los aporta la comunidad; probá otra ciudad o servidor.',' in that window. Data is crowd-sourced; try another city or server.')+'</div>'; return; }
         var body=top.map(function(r){
           return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
             '<td>'+fmt(r.units)+'</td><td class="bm">'+fmt(r.silver)+'</td><td>'+fmt(r.avg)+'</td></tr>';
         }).join('');
-        out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Unidades</th><th>Plata movida</th><th>Precio medio</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
-          '<p class="pnote">Lo más comerciado en '+esc(city)+' en las últimas '+hours+' h (histórico de ventas del juego). Cruzá esto con <b>Transporte</b>: margen alto + volumen alto = la mejor ruta.</p></div>';
+        out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Unidades','Units')+'</th><th>'+L('Plata movida','Silver traded')+'</th><th>'+L('Precio medio','Avg price')+'</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+          '<p class="pnote">'+L('Lo más comerciado en ','Most traded in ')+esc(city)+L(' en las últimas ',' in the last ')+hours+L(' h (histórico de ventas del juego). Cruzá esto con <b>Transporte</b>: margen alto + volumen alto = la mejor ruta.',' h (in-game sales history). Cross this with <b>Transport</b>: high margin + high volume = the best route.')+'</p></div>';
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
@@ -763,14 +763,14 @@
     $('snp-go').addEventListener('click',runSniper);
     function runSniper(){
       var city=$('snp-city').value, tier=+$('snp-tier').value, minDisc=+$('snp-disc').value;
-      var out=$('snp-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Buscando gangas en '+esc(city)+'… (precios + histórico, tarda unos segundos)</div>';
+      var out=$('snp-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Buscando gangas en ','Hunting for deals in ')+esc(city)+L('… (precios + histórico, tarda unos segundos)','… (prices + history, takes a few seconds)')+'</div>';
       var ids=gearUniverse([tier],[0]), feeR=sellFees(STATE.premium);
       var nd='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">';
       fetchPricesMulti(ids,[city],null).then(function(prices){
-        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        if(!Array.isArray(prices)){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió.','The price proxy did not respond.')+'</div>'; return; }
         var listed=prices.filter(function(p){ return p.city===city && fresh2(p); });
         var seen={},lids=[]; listed.forEach(function(p){ if(!seen[p.item_id]){seen[p.item_id]=1;lids.push(p.item_id);} });
-        if(!lids.length){ out.innerHTML=nd+'Sin listados frescos en '+esc(city)+' para T'+tier+' ahora mismo. Probá otra ciudad o tier.</div>'; return; }
+        if(!lids.length){ out.innerHTML=nd+L('Sin listados frescos en ','No fresh listings in ')+esc(city)+L(' para T',' for T')+tier+L(' ahora mismo. Probá otra ciudad o tier.',' right now. Try another city or tier.')+'</div>'; return; }
         return fetchHistoryMulti(lids,city,24,null).then(function(hist){
           var avgBy={}; (hist||[]).forEach(function(s){
             var pts=(s.data||[]).slice(-7).filter(function(p){ return p.item_count>0 && p.avg_price>0; });
@@ -785,10 +785,10 @@
           listed.forEach(function(p){ var h=avgBy[p.item_id+'|'+p.quality]; if(!h||!h.avg) return; var disc=1-p.sell_price_min/h.avg; if(disc<minDisc || disc>0.75) return; var net=h.avg*(1-feeR)-p.sell_price_min; if(net<=0) return; deals.push({id:p.item_id,q:p.quality,price:p.sell_price_min,avg:h.avg,disc:disc,net:net,vol:h.vol,date:p.sell_price_min_date}); });
           deals.sort(function(a,b){ return b.disc-a.disc; });
           var top=deals.slice(0,30);
-          if(!top.length){ out.innerHTML=nd+'Sin gangas ≥'+Math.round(minDisc*100)+'% en '+esc(city)+' ahora. Los mejores momentos son tras eventos y en horas pico; probá bajar el descuento mínimo.</div>'; return; }
-          var liq=function(v){ return v>=20?'<span class="badge-r safe">líquido</span>':v>=5?'<span class="badge-r" style="background:rgba(217,164,65,.15);color:var(--gold);border:1px solid rgba(217,164,65,.4)">medio</span>':'<span class="badge-r risk">ilíquido</span>'; };
-          var body=top.map(function(d){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(d.id,d.q)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(d.id))+' <span style="color:var(--muted)">·'+(QNAMES[d.q]||('q'+d.q))+'</span></span></td><td class="pos">'+fmt(d.price)+'</td><td>'+fmt(d.avg)+'</td><td class="pos">'+Math.round(d.disc*100)+'%</td><td class="pos">'+fmt(d.net)+'</td><td>'+fmt(Math.round(d.vol))+'/día '+liq(d.vol)+'</td></tr>'; }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Listado</th><th>Media 7d</th><th>Descuento</th><th>Ganancia relist</th><th>Volumen</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">Comprás el item barato y lo relistás al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo de zona roja). Ganancia ya con impuesto y comisión descontados. <b>Cuidado con la liquidez</b>: un descuentazo en algo ilíquido puede tardar días en revenderse.</p></div>';
+          if(!top.length){ out.innerHTML=nd+L('Sin gangas ≥','No deals ≥')+Math.round(minDisc*100)+L('% en ','% in ')+esc(city)+L(' ahora. Los mejores momentos son tras eventos y en horas pico; probá bajar el descuento mínimo.',' right now. The best times are after events and at peak hours; try lowering the minimum discount.')+'</div>'; return; }
+          var liq=function(v){ return v>=20?'<span class="badge-r safe">'+L('líquido','liquid')+'</span>':v>=5?'<span class="badge-r" style="background:rgba(217,164,65,.15);color:var(--gold);border:1px solid rgba(217,164,65,.4)">'+L('medio','medium')+'</span>':'<span class="badge-r risk">'+L('ilíquido','illiquid')+'</span>'; };
+          var body=top.map(function(d){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(d.id,d.q)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(d.id))+' <span style="color:var(--muted)">·'+(QNAMES[d.q]||('q'+d.q))+'</span></span></td><td class="pos">'+fmt(d.price)+'</td><td>'+fmt(d.avg)+'</td><td class="pos">'+Math.round(d.disc*100)+'%</td><td class="pos">'+fmt(d.net)+'</td><td>'+fmt(Math.round(d.vol))+L('/día','/day')+' '+liq(d.vol)+'</td></tr>'; }).join('');
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Listado','Listed')+'</th><th>'+L('Media 7d','7d median')+'</th><th>'+L('Descuento','Discount')+'</th><th>'+L('Ganancia relist','Relist profit')+'</th><th>'+L('Volumen','Volume')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('Comprás el item barato y lo relistás al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo de zona roja). Ganancia ya con impuesto y comisión descontados. <b>Cuidado con la liquidez</b>: un descuentazo en algo ilíquido puede tardar días en revenderse.','You buy the item cheap and relist it at market price in the <b>same city</b> (no transport, no red-zone risk). Profit already has tax and fee deducted. <b>Watch the liquidity</b>: a huge discount on something illiquid can take days to resell.')+'</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -797,14 +797,14 @@
     var RECIPES=null;
     $('craft-go').addEventListener('click',runCraft);
     function runCraft(){
-      var out=$('craft-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Cargando recetas y precios…</div>';
+      var out=$('craft-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Cargando recetas y precios…','Loading recipes and prices…')+'</div>';
       var load = RECIPES ? Promise.resolve(RECIPES) : fetch('recipes.json').then(function(r){return r.json();}).then(function(j){ RECIPES=j; return j; });
       load.then(function(REC){
         var rrr=+$('craft-rrr').value, instFee=instFees(STATE.premium);
         var cands=gearUniverse([4,5,6],[0,1]).filter(function(id){ return REC[id]; });
         var matSet={}; cands.forEach(function(id){ REC[id].resources.forEach(function(r){ matSet[r.id]=1; }); });
         return Promise.all([ fetchPricesMulti(Object.keys(matSet), CITIES, 1), fetchPricesMulti(cands, ['Black Market'], 1) ]).then(function(a){
-          if(!Array.isArray(a[0])||!Array.isArray(a[1])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+          if(!Array.isArray(a[0])||!Array.isArray(a[1])){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió.','The price proxy did not respond.')+'</div>'; return; }
           var matBest={}; a[0].forEach(function(p){ if(!fresh2(p)) return; if(matBest[p.item_id]==null||p.sell_price_min<matBest[p.item_id]) matBest[p.item_id]=p.sell_price_min; });
           var bm={}; a[1].forEach(function(p){ if(p.city==='Black Market'&&p.buy_price_max&&(''+p.buy_price_max_date).indexOf(NO_DATE)!==0) bm[p.item_id]=p; });
           var rows=[];
@@ -816,10 +816,10 @@
             var net=b.buy_price_max*(1-instFee)-cost; if(net<=0) return;
             rows.push({id:id,cost:cost,mn:b.buy_price_max,net:net,roi:cost>0?net/cost:0,date:b.buy_price_max_date});
           });
-          if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Ningún crafteo rentable hacia el MN ahora mismo. Probá con foco (más retorno) o en horas pico de PvE, cuando el MN sube sus órdenes.</div>'; return; }
+          if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Ningún crafteo rentable hacia el MN ahora mismo. Probá con foco (más retorno) o en horas pico de PvE, cuando el MN sube sus órdenes.','No profitable crafting to the BM right now. Try with focus (more return) or at PvE peak hours, when the BM raises its orders.')+'</div>'; return; }
           rows.sort(function(a,b){ return b.net-a.net; });
           var body=rows.slice(0,40).map(function(r){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td><td>'+fmt(r.cost)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>'; }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Coste craft</th><th>MN paga</th><th>Beneficio/u</th><th>ROI</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">Materiales al precio más barato entre ciudades. Crafteá donde tengas especialización de esa línea y llevá el producto a <b>Caerleon</b> (zona roja). El crafteo sale calidad Normal ~69%; las calidades superiores rinden algo más. Retorno usado: '+(rrr*100).toFixed(1)+'%.</p></div>';
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Coste craft','Craft cost')+'</th><th>'+L('MN paga','BM pays')+'</th><th>'+L('Beneficio/u','Profit/u')+'</th><th>ROI</th><th>'+L('Datos','Data')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('Materiales al precio más barato entre ciudades. Crafteá donde tengas especialización de esa línea y llevá el producto a <b>Caerleon</b> (zona roja). El crafteo sale calidad Normal ~69%; las calidades superiores rinden algo más. Retorno usado: ','Materials at the cheapest price across cities. Craft where you have specialization in that line and take the product to <b>Caerleon</b> (red zone). Crafting yields Normal quality ~69%; higher qualities pay a bit more. Return used: ')+(rrr*100).toFixed(1)+'%.</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -828,10 +828,10 @@
     $('plan-go').addEventListener('click',runPlan);
     function runPlan(){
       var cap=+$('plan-cap').value;
-      var out=$('plan-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el mercado y validando precios contra el histórico real… puede tardar unos segundos.</div>';
+      var out=$('plan-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Escaneando el mercado y validando precios contra el histórico real… puede tardar unos segundos.','Scanning the market and validating prices against real history… may take a few seconds.')+'</div>';
       var feeR=sellFees(STATE.premium), instFee=instFees(STATE.premium), gear=gearUniverse([4,5,6],[0,1]);
       Promise.all([ fetchPricesMulti(liquidUniverse(), CITIES, 1), fetchPricesMulti(gear, CITIES, 1), fetchPricesMulti(gear, ['Black Market'], 1) ]).then(function(a){
-        if(!Array.isArray(a[0])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
+        if(!Array.isArray(a[0])){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió.','The price proxy did not respond.')+'</div>'; return; }
         var ops=[], byItem={};
         a[0].forEach(function(p){ if(!fresh2(p)) return; (byItem[p.item_id]=byItem[p.item_id]||[]).push({city:p.city,sell:p.sell_price_min,date:p.sell_price_min_date}); });
         Object.keys(byItem).forEach(function(id){ var rows=byItem[id], buy=null,sel=null;
@@ -840,15 +840,15 @@
           if(!buy||!sel) return;
           if(sel.sell>buy.sell*30) return; // pre-filtro: nadie transporta a >30x, es precio inventado
           var net=(sel.sell-1)*(1-feeR)-buy.sell; if(net<=0) return; var roi=net/buy.sell; if(roi<0.1) return;
-          ops.push({m:'Transporte',id:id,net:net,roi:roi,cap:buy.sell,risk:(buy.city==='Caerleon'||sel.city==='Caerleon'),sellCity:sel.city,sellPrice:sel.sell,dt:'Comprá en '+buy.city+' ('+fmt(buy.sell)+') y vendé en '+sel.city+' ('+fmt(sel.sell)+')'});
+          ops.push({m:L('Transporte','Transport'),id:id,net:net,roi:roi,cap:buy.sell,risk:(buy.city==='Caerleon'||sel.city==='Caerleon'),sellCity:sel.city,sellPrice:sel.sell,dt:L('Comprá en ','Buy in ')+buy.city+' ('+fmt(buy.sell)+')'+L(' y vendé en ',' and sell in ')+sel.city+' ('+fmt(sel.sell)+')'});
         });
         if(Array.isArray(a[1])&&Array.isArray(a[2])){
           var cheap={}; a[1].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city}; });
           a[2].forEach(function(p){ if(p.city!=='Black Market'||!p.buy_price_max||(''+p.buy_price_max_date).indexOf(NO_DATE)===0) return; var c=cheap[p.item_id]; if(!c) return; var net=p.buy_price_max*(1-instFee)-c.sell; if(net<=2000) return;
-            ops.push({m:'Mercado Negro',id:p.item_id,net:net,roi:net/c.sell,cap:c.sell,risk:true,sellCity:'Black Market',sellPrice:p.buy_price_max,dt:'Comprá en '+c.city+' ('+fmt(c.sell)+') y el MN de Caerleon paga '+fmt(p.buy_price_max)});
+            ops.push({m:L('Mercado Negro','Black Market'),id:p.item_id,net:net,roi:net/c.sell,cap:c.sell,risk:true,sellCity:'Black Market',sellPrice:p.buy_price_max,dt:L('Comprá en ','Buy in ')+c.city+' ('+fmt(c.sell)+')'+L(' y el MN de Caerleon paga ',' and Caerleon BM pays ')+fmt(p.buy_price_max)});
           });
         }
-        if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">No hay oportunidades claras ahora mismo. Probá otro servidor o volvé en un rato — el mercado cambia todo el tiempo.</div>'; return; }
+        if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades claras ahora mismo. Probá otro servidor o volvé en un rato — el mercado cambia todo el tiempo.','No clear opportunities right now. Try another server or come back later — the market changes all the time.')+'</div>'; return; }
         ops.sort(function(x,y){ return y.roi-x.roi; });
         var cand=ops.slice(0,80);
         // VALIDACIÓN ANTI-FANTASMA: pedimos el histórico (últimos 7 días) por ciudad de venta y
@@ -866,21 +866,21 @@
             return true;
           });
           var top=(valid.length?valid:cand.filter(function(o){ return o.sellPrice<=o.cap*8; })).slice(0,14);
-          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">No hay oportunidades <b>reales</b> ahora mismo (descartamos los precios fantasma). Volvé en un rato — el mercado cambia todo el tiempo.</div>'; return; }
+          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades <b>reales</b> ahora mismo (descartamos los precios fantasma). Volvé en un rato — el mercado cambia todo el tiempo.','No <b>real</b> opportunities right now (we filtered out phantom prices). Come back later — the market changes all the time.')+'</div>'; return; }
           var lowCap=cap<500000;
-          var tip=lowCap?'Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.':'Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).';
+          var tip=lowCap?L('Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.','With little capital, start with <b>high ROI and low buy price</b>: invest little and reinvest your gains. The Black Market (red zone) is better once you have more.'):L('Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).','With your capital you can scale: repeat the best routes with volume (watch the item\'s real volume — don\'t overexpose yourself).');
           var cards=top.map(function(o,i){
             var per=Math.max(1,Math.min(200,Math.floor(cap/Math.max(1,o.cap))));
             return '<div class="prec'+(i===0?' top':'')+'">'+
               '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
-              '<div class="body"><div class="mtag">'+o.m+(i===0?' · Recomendado ahora':'')+'</div>'+
-                '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?'zona roja':'seguro')+'</span></div>'+
+              '<div class="body"><div class="mtag">'+o.m+(i===0?L(' · Recomendado ahora',' · Recommended now'):'')+'</div>'+
+                '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?L('zona roja','red zone'):L('seguro','safe'))+'</span></div>'+
                 '<div class="dt">'+esc(o.dt)+'</div>'+
-                (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">Movimiento: se venden ≈'+fmt(Math.round(o.vol))+'/día en '+esc(o.sellCity)+'</div>':'')+'</div>'+
+                (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+'</div>'+
               '<div class="num"><div class="p">+'+fmt(o.net)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · x'+fmt(per)+' ≈ '+fmt(o.net*per)+'</div></div></div>';
           }).join('');
           out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
-            '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' <b>Validado contra el histórico real</b> (precio medio y volumen de los últimos 7 días) para filtrar precios inventados. Igual verificá en el juego antes de invertir fuerte. "x N ≈" = ganancia aprox. con tu capital. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).</p>';
+            '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' '+L('<b>Validado contra el histórico real</b> (precio medio y volumen de los últimos 7 días) para filtrar precios inventados. Igual verificá en el juego antes de invertir fuerte. "x N ≈" = ganancia aprox. con tu capital. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).','<b>Validated against real history</b> (median price and volume of the last 7 days) to filter out phantom prices. Still, double-check in game before investing big. "x N ≈" = approx. profit with your capital. <span class="badge-r risk">red zone</span> = goes through Caerleon (you can die carrying the load).')+'</p>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -914,7 +914,7 @@
     }
     function initForo(){
       if(foroStarted){ renderForoAuth(); return; }
-      foroStarted=true; $('foro-body').innerHTML='<div class="loading"><span class="spin"></span>Cargando comunidad…</div>';
+      foroStarted=true; $('foro-body').innerHTML='<div class="loading"><span class="spin"></span>'+L('Cargando comunidad…','Loading community…')+'</div>';
       loadFirebase().then(function(){ renderForoAuth(); showForoList(); }).catch(function(e){ foroStarted=false; $('foro-body').innerHTML='<div class="err">'+esc(e.message||String(e))+'</div>'; });
     }
     function foroName(){ return (fbUser&&(fbUser.displayName||(fbUser.email||'').split('@')[0]))||'Anónimo'; }
@@ -930,12 +930,12 @@
       if(!fbUser){
         el.className='foro-auth';
         el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
-          +'<span>Podés leer todo sin cuenta. Para publicar, comentar o votar, iniciá sesión con Google.</span>'
-          +'<button class="fbtn" id="fa-google">Iniciar sesión con Google</button></div><div class="fmsg" id="fa-msg"></div>';
+          +'<span>'+L('Podés leer todo sin cuenta. Para publicar, comentar o votar, iniciá sesión con Google.','You can read everything without an account. To post, comment or vote, sign in with Google.')+'</span>'
+          +'<button class="fbtn" id="fa-google">'+L('Iniciar sesión con Google','Sign in with Google')+'</button></div><div class="fmsg" id="fa-msg"></div>';
         $('fa-google').onclick=foroGoogleLogin;
       } else {
         el.className='foro-auth row';
-        el.innerHTML='<span>Conectado como <b style="color:var(--goldb)">'+esc(foroName())+'</b>'+(isOwner()?' <span class="badge-r safe">moderador</span>':'')+'</span><button class="fbtn ghost" id="fa-out">Salir</button>';
+        el.innerHTML='<span>'+L('Conectado como','Signed in as')+' <b style="color:var(--goldb)">'+esc(foroName())+'</b>'+(isOwner()?' <span class="badge-r safe">'+L('moderador','moderator')+'</span>':'')+'</span><button class="fbtn ghost" id="fa-out">'+L('Salir','Log out')+'</button>';
         $('fa-out').onclick=function(){ fbAuth.signOut(); showForoList(); };
       }
     }
@@ -960,7 +960,7 @@
     // página (más recientes primero) y el resto con flechitas.
     var foroPage=0, foroPosts=[];
     function showForoList(){
-      var host=$('foro-body'); if(!host) return; host.innerHTML='<div class="loading"><span class="spin"></span>Cargando temas…</div>';
+      var host=$('foro-body'); if(!host) return; host.innerHTML='<div class="loading"><span class="spin"></span>'+L('Cargando temas…','Loading topics…')+'</div>';
       fbDb.collection('posts').orderBy('createdAt','desc').limit(100).get().then(function(qs){
         foroPosts=[]; qs.forEach(function(d){ foroPosts.push({id:d.id,d:d.data()}); });
         foroPage=0; renderForoFeed();
@@ -970,20 +970,20 @@
       var host=$('foro-body'); if(!host) return;
       var PER=10, total=foroPosts.length, pages=Math.max(1,Math.ceil(total/PER));
       if(foroPage>pages-1) foroPage=pages-1; if(foroPage<0) foroPage=0;
-      var head='<div style="max-width:740px;margin:0 auto 12px;display:flex;justify-content:flex-end">'+(canPost()?'<button class="fbtn" id="f-new">+ Nuevo tema</button>':'')+'</div>';
-      if(!total){ host.innerHTML=head+'<div class="foro-list"><div class="fmsg">Todavía no hay temas. ¡Escribí el primero!</div></div>'; if($('f-new')) $('f-new').onclick=showForoComposer; return; }
+      var head='<div style="max-width:740px;margin:0 auto 12px;display:flex;justify-content:flex-end">'+(canPost()?'<button class="fbtn" id="f-new">'+L('+ Nuevo tema','+ New topic')+'</button>':'')+'</div>';
+      if(!total){ host.innerHTML=head+'<div class="foro-list"><div class="fmsg">'+L('Todavía no hay temas. ¡Escribí el primero!','No topics yet. Be the first to post!')+'</div></div>'; if($('f-new')) $('f-new').onclick=showForoComposer; return; }
       var slice=foroPosts.slice(foroPage*PER,(foroPage+1)*PER);
       var cards=slice.map(function(p){
         var canDel=fbUser&&(p.d.authorUid===fbUser.uid||isOwner());
         return '<div class="fcard" data-pid="'+p.id+'">'
-          +'<h3>'+esc(p.d.title||'(sin título)')+'</h3>'
-          +'<div class="meta">por '+esc(p.d.authorName||'—')+' · '+relTime(tsDate(p.d.createdAt))+(canDel?' · <span class="flink fc-del" style="color:var(--red)">borrar</span>':'')+'</div>'
+          +'<h3>'+esc(p.d.title||L('(sin título)','(no title)'))+'</h3>'
+          +'<div class="meta">'+L('por ','by ')+esc(p.d.authorName||'—')+' · '+relTime(tsDate(p.d.createdAt))+(canDel?' · <span class="flink fc-del" style="color:var(--red)">'+L('borrar','delete')+'</span>':'')+'</div>'
           +'<div class="fbody">'+esc(p.d.body||'')+'</div>'
-          +'<div class="fc-foot"><span class="fvote"><button class="v-up" title="Útil">▲</button><b class="v-score">·</b><button class="v-down" title="No útil">▼</button></span>'
-          +'<span class="flink fc-ctoggle">💬 Comentarios</span></div>'
+          +'<div class="fc-foot"><span class="fvote"><button class="v-up" title="'+L('Útil','Useful')+'">▲</button><b class="v-score">·</b><button class="v-down" title="'+L('No útil','Not useful')+'">▼</button></span>'
+          +'<span class="flink fc-ctoggle">💬 '+L('Comentarios','Comments')+'</span></div>'
           +'<div class="fc-comments" hidden></div></div>';
       }).join('');
-      var pager = pages>1 ? '<div class="fpager"><button class="fpg" id="fp-prev"'+(foroPage===0?' disabled':'')+'>‹</button><span>Página '+(foroPage+1)+' de '+pages+'</span><button class="fpg" id="fp-next"'+(foroPage>=pages-1?' disabled':'')+'>›</button></div>' : '';
+      var pager = pages>1 ? '<div class="fpager"><button class="fpg" id="fp-prev"'+(foroPage===0?' disabled':'')+'>‹</button><span>'+L('Página ','Page ')+(foroPage+1)+L(' de ',' of ')+pages+'</span><button class="fpg" id="fp-next"'+(foroPage>=pages-1?' disabled':'')+'>›</button></div>' : '';
       host.innerHTML=head+'<div class="foro-list">'+cards+'</div>'+pager;
       if($('f-new')) $('f-new').onclick=showForoComposer;
       if($('fp-prev')) $('fp-prev').onclick=function(){ if(foroPage>0){ foroPage--; renderForoFeed(); document.getElementById('tab-foro').scrollIntoView(); } };
@@ -992,33 +992,33 @@
     }
     function wireCard(card){
       var pid=card.getAttribute('data-pid'), ref=fbDb.collection('posts').doc(pid);
-      var del=card.querySelector('.fc-del'); if(del) del.onclick=function(){ if(!confirm('¿Borrar este tema?'))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
+      var del=card.querySelector('.fc-del'); if(del) del.onclick=function(){ if(!confirm(L('¿Borrar este tema?','Delete this topic?')))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
       var scoreEl=card.querySelector('.v-score'), up=card.querySelector('.v-up'), down=card.querySelector('.v-down'), myVote=0;
       function paint(vs){ var s=0; myVote=0; vs.forEach(function(v){ var val=v.data().value||0; s+=val; if(fbUser&&v.id===fbUser.uid) myVote=val; }); scoreEl.textContent=s; up.classList.toggle('on',myVote===1); down.classList.toggle('on',myVote===-1); }
       ref.collection('votes').get().then(paint).catch(function(){ scoreEl.textContent='0'; });
       function vote(val){ if(!canPost()){ alert('Iniciá sesión con Google para votar.'); return; } var nv=(myVote===val)?0:val; var vref=ref.collection('votes').doc(fbUser.uid); (nv===0?vref.delete():vref.set({value:nv})).then(function(){ ref.collection('votes').get().then(paint); }).catch(function(e){ alert(fbErr(e)); }); }
       up.onclick=function(){vote(1);}; down.onclick=function(){vote(-1);};
       var toggle=card.querySelector('.fc-ctoggle'), box=card.querySelector('.fc-comments'), loaded=false;
-      toggle.onclick=function(){ if(box.hidden){ box.hidden=false; toggle.textContent='💬 Ocultar comentarios'; if(!loaded){ loaded=true; loadComments(ref,box); } } else { box.hidden=true; toggle.textContent='💬 Comentarios'; } };
+      toggle.onclick=function(){ if(box.hidden){ box.hidden=false; toggle.textContent='💬 '+L('Ocultar comentarios','Hide comments'); if(!loaded){ loaded=true; loadComments(ref,box); } } else { box.hidden=true; toggle.textContent='💬 '+L('Comentarios','Comments'); } };
     }
     function loadComments(ref,box){
-      box.innerHTML='<div class="fmsg">Cargando…</div>';
+      box.innerHTML='<div class="fmsg">'+L('Cargando…','Loading…')+'</div>';
       ref.collection('comments').orderBy('createdAt').limit(200).get().then(function(cs){
-        var list=[]; cs.forEach(function(c){ var d=c.data(); var canDel=fbUser&&(d.authorUid===fbUser.uid||isOwner()); list.push('<div class="fcomment"><div class="meta">'+esc(d.authorName||'—')+' · '+relTime(tsDate(d.createdAt))+(canDel?' · <span class="flink fdelc" data-cid="'+c.id+'" style="color:var(--red)">borrar</span>':'')+'</div><div class="fbody" style="margin:4px 0 0;font-size:14px">'+esc(d.body||'')+'</div></div>'); });
-        var composer = canPost() ? '<div class="foro-form" style="margin-top:10px"><textarea class="foro-in fc-ctext" rows="2" placeholder="Escribí un comentario…" maxlength="2000"></textarea><div><button class="fbtn fc-csend">Comentar</button></div></div>' : '<div class="fmsg">Iniciá sesión con Google para comentar.</div>';
-        box.innerHTML=(list.length?list.join(''):'<div class="fmsg">Sin comentarios todavía.</div>')+composer;
-        [].forEach.call(box.querySelectorAll('.fdelc'),function(el){ el.onclick=function(){ if(!confirm('¿Borrar comentario?'))return; ref.collection('comments').doc(el.getAttribute('data-cid')).delete().then(function(){ loadComments(ref,box); }).catch(function(e){alert(fbErr(e));}); }; });
+        var list=[]; cs.forEach(function(c){ var d=c.data(); var canDel=fbUser&&(d.authorUid===fbUser.uid||isOwner()); list.push('<div class="fcomment"><div class="meta">'+esc(d.authorName||'—')+' · '+relTime(tsDate(d.createdAt))+(canDel?' · <span class="flink fdelc" data-cid="'+c.id+'" style="color:var(--red)">'+L('borrar','delete')+'</span>':'')+'</div><div class="fbody" style="margin:4px 0 0;font-size:14px">'+esc(d.body||'')+'</div></div>'); });
+        var composer = canPost() ? '<div class="foro-form" style="margin-top:10px"><textarea class="foro-in fc-ctext" rows="2" placeholder="'+L('Escribí un comentario…','Write a comment…')+'" maxlength="2000"></textarea><div><button class="fbtn fc-csend">'+L('Comentar','Comment')+'</button></div></div>' : '<div class="fmsg">'+L('Iniciá sesión con Google para comentar.','Sign in with Google to comment.')+'</div>';
+        box.innerHTML=(list.length?list.join(''):'<div class="fmsg">'+L('Sin comentarios todavía.','No comments yet.')+'</div>')+composer;
+        [].forEach.call(box.querySelectorAll('.fdelc'),function(el){ el.onclick=function(){ if(!confirm(L('¿Borrar comentario?','Delete comment?')))return; ref.collection('comments').doc(el.getAttribute('data-cid')).delete().then(function(){ loadComments(ref,box); }).catch(function(e){alert(fbErr(e));}); }; });
         var send=box.querySelector('.fc-csend'); if(send) send.onclick=function(){ var ta=box.querySelector('.fc-ctext'), b=(ta.value||'').trim(); if(b.length<1){ ta.focus(); return; } send.disabled=true; ref.collection('comments').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),body:b.slice(0,2000),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){ loadComments(ref,box); }).catch(function(e){ send.disabled=false; alert(fbErr(e)); }); };
-      }).catch(function(){ box.innerHTML='<div class="fmsg">No se pudieron cargar los comentarios.</div>'; });
+      }).catch(function(){ box.innerHTML='<div class="fmsg">'+L('No se pudieron cargar los comentarios.','Could not load comments.')+'</div>'; });
     }
     function showForoComposer(){
       if(!canPost()) return; var host=$('foro-body');
-      host.innerHTML='<div class="fdetail"><span class="flink" id="f-back">‹ Volver</span><div class="foro-form" style="margin-top:10px">'
-        +'<input class="foro-in" id="f-title" type="text" placeholder="Título del tema" maxlength="140"/>'
-        +'<textarea class="foro-in" id="f-text" rows="7" placeholder="Escribí tu tema… (rutas, precios, dudas)" maxlength="5000"></textarea>'
-        +'<div><button class="fbtn" id="f-send">Publicar</button></div><div class="fmsg" id="f-msg"></div></div></div>';
+      host.innerHTML='<div class="fdetail"><span class="flink" id="f-back">‹ '+L('Volver','Back')+'</span><div class="foro-form" style="margin-top:10px">'
+        +'<input class="foro-in" id="f-title" type="text" placeholder="'+L('Título del tema','Topic title')+'" maxlength="140"/>'
+        +'<textarea class="foro-in" id="f-text" rows="7" placeholder="'+L('Escribí tu tema… (rutas, precios, dudas)','Write your topic… (routes, prices, questions)')+'" maxlength="5000"></textarea>'
+        +'<div><button class="fbtn" id="f-send">'+L('Publicar','Post')+'</button></div><div class="fmsg" id="f-msg"></div></div></div>';
       $('f-back').onclick=showForoList;
-      $('f-send').onclick=function(){ var t=($('f-title').value||'').trim(), b=($('f-text').value||'').trim(); if(t.length<1||b.length<1){ $('f-msg').textContent='Poné un título y un texto.'; return; } $('f-send').disabled=true; $('f-msg').textContent='Publicando…';
+      $('f-send').onclick=function(){ var t=($('f-title').value||'').trim(), b=($('f-text').value||'').trim(); if(t.length<1||b.length<1){ $('f-msg').textContent=L('Poné un título y un texto.','Add a title and some text.'); return; } $('f-send').disabled=true; $('f-msg').textContent=L('Publicando…','Posting…');
         fbDb.collection('posts').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),title:t.slice(0,140),body:b.slice(0,5000),createdAt:firebase.firestore.FieldValue.serverTimestamp()})
           .then(function(){ showForoList(); }).catch(function(e){ $('f-send').disabled=false; $('f-msg').textContent=fbErr(e); }); };
     }
@@ -1055,12 +1055,33 @@
         foro:'<b>Community.</b> Share routes, questions and findings with other players. Anyone can read; to post, comment or vote, sign in with Google. It\'s moderated to keep it clean.'
       };
       Object.keys(DESC).forEach(function(k){ var d=document.querySelector('#tab-'+k+' .desc'); if(d) d.innerHTML=DESC[k]; });
-      var BTN={'plan-go':'See what\'s worth it now','ref-go':'Calculate','craft-go':'Scan crafting → Black Market','flip-go':'Find transport routes','mn-go':'Scan Black Market','snp-go':'Find deals'};
+      var BTN={'plan-go':'See what\'s worth it now','ref-go':'Calculate','craft-go':'Scan crafting → Black Market','flip-go':'Find transport routes','mn-go':'Scan Black Market','snp-go':'Find deals','vol-go':'Analyze'};
       Object.keys(BTN).forEach(function(id){ var b=document.getElementById(id); if(b) b.textContent=BTN[id]; });
+      var flipHint=document.querySelector('#tab-transporte .controls span'); if(flipHint) flipHint.textContent='Compares resources, food and potions across the 7 cities. Takes a few seconds.';
+      var mnHint=document.querySelector('#tab-mn .controls span'); if(mnHint) mnHint.textContent='Gear the Caerleon BM pays more for than its city price. Takes a few seconds.';
+      var WINOPT={'24':'Last 24 h','48':'Last 48 h','168':'Last 7 days'};
+      [].forEach.call(document.querySelectorAll('#vol-window option'),function(o){ if(WINOPT[o.value]) o.textContent=WINOPT[o.value]; });
       var LBL={'¿Cuánto capital tenés?':'How much capital do you have?','Ciudad':'City','Descuento mín.':'Min. discount','Tier':'Tier','Ventana':'Window','Con foco':'With focus'};
       [].forEach.call(document.querySelectorAll('#tab-plan label,#tab-refinado label,#tab-craft label,#tab-transporte label,#tab-mn label,#tab-sniper label,#tab-mov label'),function(l){ var k=(l.textContent||'').trim(); if(LBL[k]) l.textContent=LBL[k]; });
       var CAP={'200 mil (empezando)':'200k (starting)','1 millón':'1 million','5 millones':'5 million','20 millones':'20 million'};
       [].forEach.call(document.querySelectorAll('#plan-cap option'),function(o){ var k=(o.textContent||'').trim(); if(CAP[k]) o.textContent=CAP[k]; });
+      var REFOPT={ORE:'Ore → Bars (bonus: Thetford)',WOOD:'Wood → Planks (bonus: Fort Sterling)',FIBER:'Fiber → Cloth (bonus: Lymhurst)',HIDE:'Hide → Leather (bonus: Martlock)',ROCK:'Stone → Blocks (bonus: Bridgewatch)'};
+      [].forEach.call(document.querySelectorAll('#ref-res option'),function(o){ if(REFOPT[o.value]) o.textContent=REFOPT[o.value]; });
+      var RRROPT={'0.248':'Bonus city (24.8%)','0.479':'Bonus + focus (47.9%)'};
+      [].forEach.call(document.querySelectorAll('#craft-rrr option'),function(o){ if(RRROPT[o.value]) o.textContent=RRROPT[o.value]; });
+      var PH={
+        'plan-results':'Pick your capital and I\'ll tell you, with real-time data, the best plays to make silver.',
+        'ref-results':'Pick a resource and the city where you refine (defaults to the bonus one ★). I calculate profit per tier, with and without focus, taxes included.',
+        'craft-results':'I show you which gear is worth crafting and selling to Caerleon\'s Black Market.',
+        'flip-results':'Buy cheap in one city and sell dear in another. I find the best routes by profitability.',
+        'mn-results':'Buy cheap gear in the cities and sell it to Caerleon\'s Black Market (red zone: be careful).',
+        'snp-results':'I look for gear listed well below its historical average to resell it for profit.',
+        'vol-results':'What\'s really being traded in each market right now: where the demand is before you transport.',
+        'oro-results':'Gold price and buy/sell signal.'
+      };
+      Object.keys(PH).forEach(function(id){ var p=document.querySelector('#'+id+' p'); if(p) p.textContent=PH[id]; });
+      var craftRl=document.querySelector('#tab-craft label'); if(craftRl && /Retorno de recursos/.test(craftRl.textContent)) craftRl.textContent='Resource return';
+      var qi=document.getElementById('q'); if(qi && qi.disabled) qi.placeholder='Loading game items…';
     })();
 
     // ---------- tabs (genérico) ----------
