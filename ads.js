@@ -69,12 +69,33 @@
     setTimeout(show, 45000);      // primera aparición a los 45 s
     setInterval(show, 60000);     // luego revisa cada minuto si ya pasaron los 10
   }
+  // Modal de bienvenida, SOLO móvil, una sola vez (localStorage). Aparece ANTES
+  // de cualquier anuncio y explica cómo monetizamos.
+  function welcomeModal(done) {
+    if (window.matchMedia && !window.matchMedia('(max-width:900px)').matches) { done(); return; } // solo móvil
+    try { if (localStorage.getItem('welcome_seen') === '1') { done(); return; } } catch (e) {}
+    if (document.getElementById('welcome')) { done(); return; }
+    var o = document.createElement('div'); o.id = 'welcome';
+    var c = document.createElement('div'); c.className = 'wel-card';
+    c.innerHTML =
+      '<div class="wel-ico">👋</div>' +
+      '<h3>¡Bienvenido/a!</h3>' +
+      '<p>Albion Silver Hub es <b>100% gratis</b>. En la compu los anuncios van discretos a los costados y no molestan.</p>' +
+      '<p>En el celular te va a aparecer <b>un aviso cada 10 minutos</b> (siempre cerrable) — es la única forma de que, como desarrolladores, tengamos una ganancia mínima por mantener la página.</p>' +
+      '<p>¡Ojalá lo entiendan y disfruten de la web! Gracias 🙌</p>' +
+      '<button class="wel-btn" id="wel-ok" type="button">¡Entendido!</button>';
+    o.appendChild(c); document.body.appendChild(o);
+    document.getElementById('wel-ok').onclick = function () {
+      try { localStorage.setItem('welcome_seen', '1'); } catch (e) {}
+      o.remove(); done();
+    };
+  }
   function init() {
     if (!document.querySelector('.ad-rail')) {
       document.body.appendChild(rail('left'));
       document.body.appendChild(rail('right'));
     }
-    adInterstitial();
+    welcomeModal(adInterstitial); // primero el saludo; los anuncios móviles arrancan al cerrarlo
   }
   if (document.readyState !== 'loading') init();
   else document.addEventListener('DOMContentLoaded', init);
