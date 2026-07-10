@@ -814,7 +814,7 @@
     }
 
     // ---------- FORO / COMUNIDAD ----------
-    var fbReady=false, fbAuth=null, fbDb=null, fbUser=null, foroStarted=false;
+    var fbReady=false, fbAuth=null, fbDb=null, fbUser=null, foroStarted=false, _authProc=false, _lastUid=null;
     var OWNERS=['jeroobregon03@gmail.com','thiagowendler53@gmail.com'];
     function loadFirebase(){
       if(fbReady) return Promise.resolve();
@@ -825,9 +825,16 @@
         function done(){ try{
           firebase.initializeApp({apiKey:'AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU',authDomain:'albionxp-eef13.firebaseapp.com',projectId:'albionxp-eef13'});
           fbAuth=firebase.auth(); fbDb=firebase.firestore(); fbReady=true;
-          fbAuth.onAuthStateChanged(function(u){ fbUser=u; renderForoAuth(); });
-          // Completa el login por REDIRECT (móvil) al volver de Google.
-          fbAuth.getRedirectResult().then(function(r){ try{sessionStorage.removeItem('pending_google');}catch(e){} if(r&&r.user){ foroMsg(''); showForoList(); } }).catch(function(e){ try{sessionStorage.removeItem('pending_google');}catch(e){} foroMsg(fbErr(e)); });
+          try{ fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){} // la sesión sobrevive recargas
+          // onAuthStateChanged = ÚNICA fuente de verdad del login (popup, vuelta de redirect o sesión guardada).
+          // Guardas _authProc/_lastUid evitan procesar dos veces al mismo usuario.
+          fbAuth.onAuthStateChanged(function(u){
+            fbUser=u; renderForoAuth();
+            if(u){ if(!_authProc && _lastUid!==u.uid){ _authProc=true; _lastUid=u.uid; foroMsg(''); if(!$('tab-foro').hidden) showForoList(); _authProc=false; } }
+            else { _lastUid=null; }
+          });
+          // getRedirectResult: SOLO para el fallback por redirect (limpiar bandera); el login lo procesa onAuthStateChanged.
+          fbAuth.getRedirectResult().then(function(){ try{sessionStorage.removeItem('pending_google');}catch(e){} }).catch(function(e){ try{sessionStorage.removeItem('pending_google');}catch(e){} foroMsg(fbErr(e)); });
           res();
         }catch(e){ rej(e); } }
       });
@@ -860,28 +867,21 @@
         $('fa-out').onclick=function(){ fbAuth.signOut(); showForoList(); };
       }
     }
-    // En móvil (Android/iOS/navegadores in-app) los popups se bloquean → usamos REDIRECT,
-    // que es la forma confiable de loguear con Google en el celular. En desktop, popup.
-    function isMobileAuth(){ return /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(max-width:900px)').matches); }
+    function isMobileAuth(){ return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
+    // POPUP-FIRST en todos los dispositivos (recomendación Firebase 2024: el popup no depende de las
+    // cookies de terceros que iOS/Safari bloquean, así que es lo más confiable en móvil). Redirect = plan B.
+    // El login NO se procesa acá: lo hace onAuthStateChanged (única fuente de verdad).
     function foroGoogleLogin(){
       foroMsg('Abriendo Google…');
       var prov=new firebase.auth.GoogleAuthProvider();
       prov.setCustomParameters({ prompt:'select_account' });
-      if(isMobileAuth()){
-        try{ sessionStorage.setItem('pending_google','1'); }catch(e){}
-        fbAuth.signInWithRedirect(prov).catch(function(e){ try{sessionStorage.removeItem('pending_google');}catch(e2){} foroMsg(fbErr(e)); });
-        return;
-      }
-      fbAuth.signInWithPopup(prov).then(function(){ foroMsg(''); showForoList(); }).catch(function(e){
+      fbAuth.signInWithPopup(prov).catch(function(e){
         var c=(e&&e.code)||'';
-        if(c.indexOf('popup-blocked')>=0||c.indexOf('operation-not-supported')>=0){
-          // el navegador bloqueó el popup → caemos a redirect
-          try{ sessionStorage.setItem('pending_google','1'); }catch(e2){}
-          fbAuth.signInWithRedirect(prov).catch(function(e2){ foroMsg(fbErr(e2)); });
-        }
-        else if(c.indexOf('popup-closed')>=0||c.indexOf('cancelled-popup')>=0) foroMsg('Cerraste la ventana de Google antes de terminar.');
-        else if(c.indexOf('unauthorized-domain')>=0) foroMsg('Este dominio no está autorizado en Firebase todavía.');
-        else foroMsg(fbErr(e));
+        var toRedirect=/popup-blocked|cancelled-popup-request|operation-not-supported|web-storage-unsupported|network-request-failed/.test(c);
+        if(c.indexOf('popup-closed')>=0){ if(isMobileAuth()) toRedirect=true; else { foroMsg(''); return; } } // móvil = lo bloqueó; desktop = lo cerró a propósito
+        if(toRedirect){ try{ sessionStorage.setItem('pending_google','1'); }catch(e2){} fbAuth.signInWithRedirect(prov).catch(function(e2){ foroMsg(fbErr(e2)); }); return; }
+        if(c.indexOf('unauthorized-domain')>=0){ foroMsg('Este dominio no está autorizado en Firebase todavía.'); return; }
+        foroMsg(fbErr(e));
       });
     }
     function showForoList(){
