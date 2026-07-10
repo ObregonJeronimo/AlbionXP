@@ -29,6 +29,8 @@ simple = { limit = 60, period = 60 }
 #   MP_ACCESS_TOKEN  (secret) — token de producción de Mercado Pago
 #   MP_WEBHOOK_SECRET (secret) — clave secreta del webhook de MP
 #   SA_PRIVATE_KEY   (secret) — private_key del service account de Firebase
+#   ADSTERRA_TOKEN   (secret) — API token de Adsterra para ver ingresos en /admin
+#                    Setear con:  npx wrangler secret put ADSTERRA_TOKEN
 [vars]
 # API key web de Firebase (PÚBLICA por diseño, ya está en config.js). Pre-cargada.
 FIREBASE_API_KEY = "AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU"

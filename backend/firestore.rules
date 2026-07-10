@@ -81,5 +81,12 @@ service cloud.firestore {
       allow read: if isOwner();
       // Las visitas web las escribe el worker (si se despliega) o nadie: los clientes no escriben aquí.
     }
+
+    // Muro de donaciones: lo lee cualquiera (para mostrarlo en la web), lo edita solo un dueño
+    // desde el panel /admin. { name, msg, createdAt }.
+    match /donors/{id} {
+      allow read: if true;
+      allow create, update, delete: if isOwner();
+    }
   }
 }

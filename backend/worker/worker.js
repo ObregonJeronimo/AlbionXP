@@ -40,6 +40,8 @@ export default {
       if (request.method === 'GET' && url.pathname === '/admin') return await adminStats(request, url, env);
       // --- proxy de precios AODP (para la version WEB: el navegador no puede llamar AODP por CORS) ---
       if (request.method === 'GET' && url.pathname === '/aodp') return await aodpProxy(request, url, env);
+      // --- stats de Adsterra (ingresos) para el panel de admin: token seguro del lado servidor ---
+      if (request.method === 'GET' && url.pathname === '/adsterra') return await adsterraStats(request, url, env);
       return json({ ok: true, service: 'albion-silver-hub-backend' });
     } catch (e) {
       console.log('ERROR', e.message);
@@ -320,6 +322,27 @@ async function isOwner(request, url, env) {
   // 2) Respaldo opcional: clave secreta por querystring (solo si ADMIN_KEY está configurada)
   if (env.ADMIN_KEY && url.searchParams.get('key') === env.ADMIN_KEY) return true;
   return false;
+}
+
+// Ingresos de Adsterra. Solo dueños. El API token vive como secret del worker
+// (ADSTERRA_TOKEN), nunca en el navegador. Devuelve las filas por fecha tal cual las da Adsterra.
+async function adsterraStats(request, url, env) {
+  if (!(await isOwner(request, url, env))) return json({ error: 'no autorizado' }, 403);
+  const token = env.ADSTERRA_TOKEN;
+  if (!token) return json({ error: 'Falta ADSTERRA_TOKEN en el worker (npx wrangler secret put ADSTERRA_TOKEN).' }, 500);
+  const today = new Date().toISOString().slice(0, 10);
+  const finish = (url.searchParams.get('finish') || today).slice(0, 10);
+  const start = (url.searchParams.get('start') || new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    const r = await fetch(`https://api3.adsterratools.com/publisher/stats.json?start_date=${start}&finish_date=${finish}&group_by=date`, {
+      headers: { 'X-API-Key': token, 'Accept': 'application/json' },
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return json({ error: 'Adsterra respondió ' + r.status, detail: data }, 502);
+    return json({ range: { start, finish }, items: data.items || [], updated: data.dbLastUpdateTime || null });
+  } catch (e) {
+    return json({ error: 'No se pudo consultar Adsterra: ' + String(e.message || e) }, 502);
+  }
 }
 
 async function adminStats(request, url, env) {
