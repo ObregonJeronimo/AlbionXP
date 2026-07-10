@@ -24,3 +24,13 @@
 
 /* Aparecen solo cuando hay margen libre a los costados para no pisar el contenido. */
 @media (min-width:1520px){ .ad-rail{ display:flex; } }
+
+/* Interstitial móvil: cuadrado centrado con X. Nunca supera la pantalla. */
+#interst{ position:fixed; inset:0; z-index:100001; display:flex; align-items:center; justify-content:center;
+  padding:8px; background:rgba(8,7,5,.85); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+#interst .interst-card{ position:relative; max-width:calc(100vw - 16px); max-height:calc(100vh - 90px); overflow:hidden;
+  background:#1a1610; border:1px solid #4a3a22; border-radius:12px; padding:6px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+#interst .interst-card iframe{ display:block; border:0; max-width:100%; }
+#interst .interst-x{ position:fixed; top:12px; right:12px; width:40px; height:40px; border-radius:50%;
+  background:#1a1610; border:1px solid #4a3a22; color:#f2c877; font-size:23px; line-height:36px; text-align:center;
+  cursor:pointer; padding:0; box-shadow:0 4px 14px rgba(0,0,0,.6); }
