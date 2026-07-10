@@ -29,6 +29,19 @@ const SUB_DAYS = 31; // cada cobro autorizado extiende la suscripción 31 días
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // Preflight CORS: el panel /admin manda el header Authorization (Bearer), que exige
+    // un OPTIONS previo. Sin esto el navegador bloquea la llamada a /adsterra y /admin.
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'authorization, content-type',
+          'Access-Control-Max-Age': '86400',
+        },
+      });
+    }
     try {
       if (request.method === 'POST' && url.pathname === '/checkout') return await checkout(request, env);
       if (request.method === 'POST' && url.pathname === '/webhook') return await webhook(request, env);
