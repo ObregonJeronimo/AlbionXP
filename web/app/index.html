@@ -162,8 +162,7 @@
     .fpg{background:var(--iron3);border:1px solid var(--line2);color:var(--gold);border-radius:8px;width:40px;height:34px;cursor:pointer;font-size:18px;line-height:1}
     .fpg:hover:not(:disabled){border-color:var(--gold)}
     .fpg:disabled{opacity:.35;cursor:default}
-    .fpost{background:var(--iron2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .12s,transform .12s}
-    .fpost:hover{border-color:var(--gold);transform:translateY(-2px)}
+    .fpost{background:var(--iron2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
     .fpost h3{font-family:'Cinzel',serif;font-size:16px;color:var(--text);margin-bottom:3px}
     .fpost .meta,.fcomment .meta{color:var(--muted);font-size:12.5px}
     .fdetail{max-width:740px;margin:0 auto 60px}
@@ -171,6 +170,17 @@
     .fbtn.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted)}
     .fbtn:disabled{opacity:.5;cursor:default}
     .fbody{white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:15px;line-height:1.6;margin:10px 0}
+    .fbody-prev{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+    .fc-title{font-family:'Cinzel',serif;font-size:15px;color:var(--gold);max-width:740px;margin:18px auto 6px}
+    .fc-open{font-size:13px}
+    .qh{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border-radius:50%;background:var(--iron3);border:1px solid var(--line2);color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;vertical-align:middle;font-family:system-ui,sans-serif}
+    .qh:hover{border-color:var(--gold);color:var(--gold)}
+    #help-ov{position:fixed;inset:0;z-index:100002;background:rgba(8,7,5,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:18px}
+    .help-card{max-width:400px;background:var(--iron2);border:1px solid var(--line2);border-radius:16px;padding:22px 22px 24px;position:relative;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+    .help-card h4{font-family:'Cinzel',serif;color:var(--gold);font-size:17px;margin:0 0 10px;padding-right:24px}
+    .help-card p{color:var(--text);font-size:14px;line-height:1.6;margin:0}
+    .help-card b{color:var(--gold)}
+    .help-x{position:absolute;top:10px;right:12px;background:none;border:0;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
     .fvote{display:inline-flex;align-items:center;gap:8px;margin:8px 0}
     .fvote button{background:var(--iron3);border:1px solid var(--line2);color:var(--muted);border-radius:8px;width:36px;height:32px;cursor:pointer;font-size:14px}
     .fvote button.on{border-color:var(--gold);color:var(--gold)}
@@ -180,8 +190,18 @@
     footer{border-top:1px solid var(--line);text-align:center;color:var(--faint);font-size:13px;padding:26px 0 34px}
     .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
     @media(max-width:640px){
-      .ptable{min-width:560px}                 /* la tabla mantiene ancho y el contenedor .tw scrollea, sin aplastar columnas */
-      .ptable th,.ptable td{padding:9px 11px;font-size:13px}
+      /* Tablas como TARJETAS apiladas (sin scroll horizontal): cada fila es una tarjeta
+         y cada celda muestra "Etiqueta: valor" (la etiqueta viene del encabezado via data-label). */
+      .tw{overflow:visible}
+      .ptable thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+      .ptable,.ptable tbody,.ptable tr,.ptable td{display:block;width:100%}
+      .ptable tr{margin-bottom:10px;border:1px solid var(--line);border-radius:11px;padding:7px 13px;background:var(--iron2)}
+      .ptable td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:6px 0;font-size:13.5px;text-align:right;min-width:0}
+      .ptable td::before{content:attr(data-label);color:var(--muted);font-weight:600;text-align:left;flex:0 0 42%;word-break:break-word}
+      .ptable td:first-child{font-weight:700;border-bottom:1px solid var(--line);margin-bottom:5px;padding-bottom:9px;text-align:left}
+      .ptable td:first-child::before{content:none}
+      .ptable td.txt{text-align:right}
+      .ptable td:first-child .icell{justify-content:flex-start}
       .rtable .icell img{width:26px;height:26px}
       .results{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
       .controls{gap:10px}
@@ -535,7 +555,7 @@
         body.innerHTML =
           (hasAny ? '' : '<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Este item casi no se comercia en <b>','This item is barely traded in <b>')+QNAMES[STATE.quality]+L('</b> ahora mismo. Suele pasar con armas de artefacto/Hell, encantamientos altos o ítems poco populares. Probá con un item más común, otra <b>calidad</b> (arriba) u otro <b>servidor</b>.','</b> quality right now. This usually happens with artifact/Hell weapons, high enchantments or unpopular items. Try a more common item, another <b>quality</b> (above) or another <b>server</b>.')+'</div>') +
           '<div class="tw"><table class="ptable"><thead><tr>'+
-            '<th class="city">'+L('Ciudad','City')+'</th><th>'+L('Venta mín.','Min. sell')+'</th><th>'+L('Compra máx.','Max. buy')+'</th><th>'+L('Datos','Data')+'</th>'+
+            '<th class="city">'+L('Ciudad','City')+'</th><th>'+L('Venta mín.','Min. sell')+qh('ventamin')+'</th><th>'+L('Compra máx.','Max. buy')+qh('compramax')+'</th><th>'+L('Datos','Data')+qh('datos')+'</th>'+
           '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
           '<p class="pnote">'+L('Verde = venta más barata · Rojo = compra más cara (mejor para vender al instante). ','Green = cheapest sell · Red = highest buy (best to sell instantly). ')+
           L('Los precios los aporta la comunidad y pueden estar viejos: mirá la columna "Datos". ','Prices are crowd-sourced and may be old: check the "Data" column. ')+(STATE.premium?'':L('Marcá "Premium" arriba si tenés la cuenta premium.','Check "Premium" above if you have a premium account.'))+
@@ -613,7 +633,7 @@
             '<td class="age">'+ageTxt(r.age)+'</td></tr>';
         }).join('');
         out.innerHTML=rec+'<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr>'+
-          '<th class="txt">'+L('Producto','Product')+'</th><th>'+L('Materia','Raw mat.')+'</th><th>'+L('Coste/u','Cost/u')+'</th><th>'+L('Venta','Sell')+'</th><th>'+L('Benef./u','Profit/u')+'</th><th>ROI</th><th>'+L('Con foco','With focus')+'</th><th>'+L('ROI foco','ROI focus')+'</th><th>'+L('Datos','Data')+'</th>'+
+          '<th class="txt">'+L('Producto','Product')+'</th><th>'+L('Materia','Raw mat.')+'</th><th>'+L('Coste/u','Cost/u')+'</th><th>'+L('Venta','Sell')+'</th><th>'+L('Benef./u','Profit/u')+qh('benef')+'</th><th>ROI'+qh('roi')+'</th><th>'+L('Con foco','With focus')+qh('confoco')+'</th><th>'+L('ROI foco','ROI focus')+qh('roifoco')+'</th><th>'+L('Datos','Data')+qh('datos')+'</th>'+
           '</tr></thead><tbody>'+bodyRows+'</tbody></table></div>'+
           '<p class="pnote">'+L('Coste = materias × (1 − retorno ','Cost = materials × (1 − return ')+(rrr*100).toFixed(1)+L('%) + tarifa de estación, ya con impuesto de venta (','%) + station fee, already with sales tax (')+(feeR*100).toFixed(1)+L('%). El retorno de recursos actúa como descuento. ','%). The resource return acts as a discount. ')+(STATE.premium?'':L('Marcá "Premium" arriba si tenés premium.','Check "Premium" above if you have premium.'))+'</p></div>';
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
@@ -669,7 +689,7 @@
               '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="txt">'+esc(r.sc)+' · '+fmt(r.sp)+warn+'</td>'+
               '<td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td>'+vol+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
           }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">'+L('Comprar en','Buy in')+'</th><th class="txt">'+L('Vender en','Sell in')+'</th><th>'+L('Benef./u','Profit/u')+'</th><th>ROI</th><th>'+L('Vendidos','Sold')+'</th><th>'+L('Datos','Data')+'</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">'+L('Comprar en','Buy in')+'</th><th class="txt">'+L('Vender en','Sell in')+'</th><th>'+L('Benef./u','Profit/u')+qh('benef')+'</th><th>ROI'+qh('roi')+'</th><th>'+L('Vendidos','Sold')+qh('vendidosmn')+'</th><th>'+L('Datos','Data')+qh('datos')+'</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
             '<p class="pnote">'+L('Comprás en la ciudad más barata y vendés en la más cara, tras impuesto (','Buy in the cheapest city and sell in the priciest, after tax (')+(feeR*100).toFixed(1)+L('%). <b>Validado contra el histórico</b> (mediana y volumen de 7 días) para filtrar precios inventados. "Vendidos" = unidades/día que se mueven en la ciudad de venta (más = más fácil de vender). <span style="color:var(--red)">⚠</span> = pasa por Caerleon (zona roja: podés morir con la carga).','%). <b>Validated against history</b> (7-day median and volume) to filter phantom prices. "Sold" = units/day traded in the sell city (more = easier to sell). <span style="color:var(--red)">⚠</span> = goes through Caerleon (red zone: you can die carrying the load).')+'</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
@@ -696,7 +716,7 @@
             return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
               '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td>'+vol+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
           }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">'+L('Comprar en','Buy in')+'</th><th>'+L('MN paga','BM pays')+'</th><th>'+L('Beneficio/u','Profit/u')+'</th><th>'+L('Vendidos MN','Sold in BM')+'</th><th>'+L('Datos','Data')+'</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">'+L('Comprar en','Buy in')+'</th><th>'+L('MN paga','BM pays')+qh('mnpaga')+'</th><th>'+L('Benef./u','Profit/u')+qh('benef')+'</th><th>'+L('Vendidos MN','Sold in BM')+qh('vendidosmn')+'</th><th>'+L('Datos','Data')+qh('datos')+'</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
             '<p class="pnote">'+L('Comprás el equipo barato en la ciudad y lo vendés al instante al Mercado Negro (impuesto ','Buy the gear cheap in the city and sell it instantly to the Black Market (tax ')+(instFee*100)+L('%), en <b>Caerleon</b> (zona roja): montura rápida y no cargues de más. <b>Validado contra el histórico del MN</b> (mediana + volumen) para filtrar órdenes fantasma. "Vendidos MN" = unidades/día en el Mercado Negro. Base calidad Normal.','%), in <b>Caerleon</b> (red zone): fast mount and don\'t overload. <b>Validated against BM history</b> (median + volume) to filter phantom orders. "Sold in BM" = units/day in the Black Market. Base Normal quality.')+'</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
@@ -790,7 +810,7 @@
           if(!top.length){ out.innerHTML=nd+L('Sin gangas ≥','No deals ≥')+Math.round(minDisc*100)+L('% en ','% in ')+esc(city)+L(' ahora. Los mejores momentos son tras eventos y en horas pico; probá bajar el descuento mínimo.',' right now. The best times are after events and at peak hours; try lowering the minimum discount.')+'</div>'; return; }
           var liq=function(v){ return v>=20?'<span class="badge-r safe">'+L('líquido','liquid')+'</span>':v>=5?'<span class="badge-r" style="background:rgba(217,164,65,.15);color:var(--gold);border:1px solid rgba(217,164,65,.4)">'+L('medio','medium')+'</span>':'<span class="badge-r risk">'+L('ilíquido','illiquid')+'</span>'; };
           var body=top.map(function(d){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(d.id,d.q)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(d.id))+' <span style="color:var(--muted)">·'+(QNAMES[d.q]||('q'+d.q))+'</span></span></td><td class="pos">'+fmt(d.price)+'</td><td>'+fmt(d.avg)+'</td><td class="pos">'+Math.round(d.disc*100)+'%</td><td class="pos">'+fmt(d.net)+'</td><td>'+fmt(Math.round(d.vol))+L('/día','/day')+' '+liq(d.vol)+'</td></tr>'; }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Listado','Listed')+'</th><th>'+L('Media 7d','7d median')+'</th><th>'+L('Descuento','Discount')+'</th><th>'+L('Ganancia relist','Relist profit')+'</th><th>'+L('Volumen','Volume')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('Comprás el item barato y lo relistás al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo de zona roja). Ganancia ya con impuesto y comisión descontados. <b>Cuidado con la liquidez</b>: un descuentazo en algo ilíquido puede tardar días en revenderse.','You buy the item cheap and relist it at market price in the <b>same city</b> (no transport, no red-zone risk). Profit already has tax and fee deducted. <b>Watch the liquidity</b>: a huge discount on something illiquid can take days to resell.')+'</p></div>';
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Listado','Listed')+qh('listado')+'</th><th>'+L('Media 7d','7d median')+qh('media7d')+'</th><th>'+L('Descuento','Discount')+qh('descuento')+'</th><th>'+L('Ganancia relist','Relist profit')+qh('ganrelist')+'</th><th>'+L('Volumen','Volume')+qh('volumen')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('Comprás el item barato y lo relistás al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo de zona roja). Ganancia ya con impuesto y comisión descontados. <b>Cuidado con la liquidez</b>: un descuentazo en algo ilíquido puede tardar días en revenderse.','You buy the item cheap and relist it at market price in the <b>same city</b> (no transport, no red-zone risk). Profit already has tax and fee deducted. <b>Watch the liquidity</b>: a huge discount on something illiquid can take days to resell.')+'</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -821,7 +841,7 @@
           if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Ningún crafteo rentable hacia el MN ahora mismo. Probá con foco (más retorno) o en horas pico de PvE, cuando el MN sube sus órdenes.','No profitable crafting to the BM right now. Try with focus (more return) or at PvE peak hours, when the BM raises its orders.')+'</div>'; return; }
           rows.sort(function(a,b){ return b.net-a.net; });
           var body=rows.slice(0,40).map(function(r){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td><td>'+fmt(r.cost)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>'; }).join('');
-          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Coste craft','Craft cost')+'</th><th>'+L('MN paga','BM pays')+'</th><th>'+L('Beneficio/u','Profit/u')+'</th><th>ROI</th><th>'+L('Datos','Data')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('Materiales al precio más barato entre ciudades. Crafteá donde tengas especialización de esa línea y llevá el producto a <b>Caerleon</b> (zona roja). El crafteo sale calidad Normal ~69%; las calidades superiores rinden algo más. Retorno usado: ','Materials at the cheapest price across cities. Craft where you have specialization in that line and take the product to <b>Caerleon</b> (red zone). Crafting yields Normal quality ~69%; higher qualities pay a bit more. Return used: ')+(rrr*100).toFixed(1)+'%.</p></div>';
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Coste craft','Craft cost')+'</th><th>'+L('MN paga','BM pays')+qh('mnpaga')+'</th><th>'+L('Beneficio/u','Profit/u')+qh('benef')+'</th><th>ROI'+qh('roi')+'</th><th>'+L('Datos','Data')+qh('datos')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('Materiales al precio más barato entre ciudades. Crafteá donde tengas especialización de esa línea y llevá el producto a <b>Caerleon</b> (zona roja). El crafteo sale calidad Normal ~69%; las calidades superiores rinden algo más. Retorno usado: ','Materials at the cheapest price across cities. Craft where you have specialization in that line and take the product to <b>Caerleon</b> (red zone). Crafting yields Normal quality ~69%; higher qualities pay a bit more. Return used: ')+(rrr*100).toFixed(1)+'%.</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -851,7 +871,7 @@
             '<div class="dt">'+esc(o.dt)+'</div>'+
             '<div class="dt plan-do">🛒 '+L('Comprá ','Buy ')+'<b>'+fmt(qty)+'</b>'+L(' und · invertís ~',' units · invest ~')+'<b>'+fmt(inv)+'</b>'+L(' de plata',' silver')+'</div>'+
             (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+'</div>'+
-          '<div class="num"><div class="p">+'+fmt(gain)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · '+fmt(o.net)+L('/u','/u ')+'</div></div></div>';
+          '<div class="num"><div class="p">+'+fmt(gain)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI'+qh('roi')+' · '+fmt(o.net)+L('/u','/u ')+'</div></div></div>';
       }).join('');
       out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
         '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' '+L('<b>Validado contra el histórico real</b> (precio medio y volumen de 7 días) para filtrar precios inventados. Igual verificá en el juego antes de invertir fuerte. La cantidad a comprar se ajusta a <b>tu capital</b> y a lo que se vende por día (para que puedas revenderlo). El número verde grande = <b>ganancia total estimada</b>. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).','<b>Validated against real history</b> (7-day median price and volume) to filter out phantom prices. Still, double-check in game before investing big. The quantity to buy adapts to <b>your capital</b> and to daily volume (so you can actually resell it). The big green number = <b>estimated total profit</b>. <span class="badge-r risk">red zone</span> = goes through Caerleon (you can die carrying the load).')+'</p>';
@@ -996,10 +1016,9 @@
         return '<div class="fcard" data-pid="'+p.id+'">'
           +'<h3>'+esc(p.d.title||L('(sin título)','(no title)'))+'</h3>'
           +'<div class="meta">'+L('por ','by ')+esc(p.d.authorName||'—')+' · '+relTime(tsDate(p.d.createdAt))+(canDel?' · <span class="flink fc-del" style="color:var(--red)">'+L('borrar','delete')+'</span>':'')+'</div>'
-          +'<div class="fbody">'+esc(p.d.body||'')+'</div>'
+          +'<div class="fbody fbody-prev">'+esc(p.d.body||'')+'</div>'
           +'<div class="fc-foot"><span class="fvote"><button class="v-up" title="'+L('Útil','Useful')+'">▲</button><b class="v-score">·</b><button class="v-down" title="'+L('No útil','Not useful')+'">▼</button></span>'
-          +'<span class="flink fc-ctoggle">💬 '+L('Comentarios','Comments')+'</span></div>'
-          +'<div class="fc-comments" hidden></div></div>';
+          +'<span class="flink fc-open">💬 <span class="fc-count">'+L('Comentarios','Comments')+'</span></span></div></div>';
       }).join('');
       var pager = pages>1 ? '<div class="fpager"><button class="fpg" id="fp-prev"'+(foroPage===0?' disabled':'')+'>‹</button><span>'+L('Página ','Page ')+(foroPage+1)+L(' de ',' of ')+pages+'</span><button class="fpg" id="fp-next"'+(foroPage>=pages-1?' disabled':'')+'>›</button></div>' : '';
       host.innerHTML=head+'<div class="foro-list">'+cards+'</div>'+pager;
@@ -1008,16 +1027,48 @@
       if($('fp-next')) $('fp-next').onclick=function(){ if(foroPage<pages-1){ foroPage++; renderForoFeed(); document.getElementById('tab-foro').scrollIntoView(); } };
       [].forEach.call(host.querySelectorAll('.fcard'),function(card){ wireCard(card); });
     }
-    function wireCard(card){
-      var pid=card.getAttribute('data-pid'), ref=fbDb.collection('posts').doc(pid);
-      var del=card.querySelector('.fc-del'); if(del) del.onclick=function(){ if(!confirm(L('¿Borrar este tema?','Delete this topic?')))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
-      var scoreEl=card.querySelector('.v-score'), up=card.querySelector('.v-up'), down=card.querySelector('.v-down'), myVote=0;
+    // Voto (▲ score ▼) reutilizable para la tarjeta del feed y para el tema abierto.
+    function wireVote(scope,ref){
+      var scoreEl=scope.querySelector('.v-score'), up=scope.querySelector('.v-up'), down=scope.querySelector('.v-down'); if(!up) return; var myVote=0;
       function paint(vs){ var s=0; myVote=0; vs.forEach(function(v){ var val=v.data().value||0; s+=val; if(fbUser&&v.id===fbUser.uid) myVote=val; }); scoreEl.textContent=s; up.classList.toggle('on',myVote===1); down.classList.toggle('on',myVote===-1); }
       ref.collection('votes').get().then(paint).catch(function(){ scoreEl.textContent='0'; });
-      function vote(val){ if(!canPost()){ alert('Iniciá sesión con Google para votar.'); return; } var nv=(myVote===val)?0:val; var vref=ref.collection('votes').doc(fbUser.uid); (nv===0?vref.delete():vref.set({value:nv})).then(function(){ ref.collection('votes').get().then(paint); }).catch(function(e){ alert(fbErr(e)); }); }
+      function vote(val){ if(!canPost()){ alert(L('Iniciá sesión con Google para votar.','Sign in with Google to vote.')); return; } var nv=(myVote===val)?0:val; var vref=ref.collection('votes').doc(fbUser.uid); (nv===0?vref.delete():vref.set({value:nv})).then(function(){ ref.collection('votes').get().then(paint); }).catch(function(e){ alert(fbErr(e)); }); }
       up.onclick=function(){vote(1);}; down.onclick=function(){vote(-1);};
-      var toggle=card.querySelector('.fc-ctoggle'), box=card.querySelector('.fc-comments'), loaded=false;
-      toggle.onclick=function(){ if(box.hidden){ box.hidden=false; toggle.textContent='💬 '+L('Ocultar comentarios','Hide comments'); if(!loaded){ loaded=true; loadComments(ref,box); } } else { box.hidden=true; toggle.textContent='💬 '+L('Comentarios','Comments'); } };
+    }
+    // Cuenta comentarios (usa el agregado count() si el SDK lo soporta; si no, cae a leer y contar).
+    function countComments(ref){
+      return Promise.resolve().then(function(){ return ref.collection('comments').count().get(); })
+        .then(function(s){ return s.data().count; })
+        .catch(function(){ return ref.collection('comments').get().then(function(s){ return s.size; }).catch(function(){ return 0; }); });
+    }
+    function commentLabel(n){ return n===0?L('Sin comentarios','No comments'):(n+' '+(n===1?L('comentario','comment'):L('comentarios','comments'))); }
+    function wireCard(card){
+      var pid=card.getAttribute('data-pid'), ref=fbDb.collection('posts').doc(pid);
+      var del=card.querySelector('.fc-del'); if(del) del.onclick=function(ev){ ev.stopPropagation(); if(!confirm(L('¿Borrar este tema?','Delete this topic?')))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
+      wireVote(card,ref);
+      var cnt=card.querySelector('.fc-count'); if(cnt) countComments(ref).then(function(n){ cnt.textContent=commentLabel(n); });
+      // Abrir el tema completo (con comentarios y para comentar). No dispara si tocaste voto/borrar.
+      var open=card.querySelector('.fc-open'); if(open) open.onclick=function(){ openForoPost(pid); };
+    }
+    // Vista de tema completo: título, cuerpo entero, voto, borrar y comentarios (con caja para comentar).
+    function openForoPost(pid){
+      var p=null; for(var i=0;i<foroPosts.length;i++){ if(foroPosts[i].id===pid){ p=foroPosts[i]; break; } }
+      if(!p) return; var host=$('foro-body'); if(!host) return;
+      var ref=fbDb.collection('posts').doc(pid);
+      var canDel=fbUser&&(p.d.authorUid===fbUser.uid||isOwner());
+      host.innerHTML='<div class="fdetail"><span class="flink" id="f-back">‹ '+L('Volver','Back')+'</span>'
+        +'<div class="fpost" style="margin-top:10px">'
+        +'<h3>'+esc(p.d.title||L('(sin título)','(no title)'))+'</h3>'
+        +'<div class="meta">'+L('por ','by ')+esc(p.d.authorName||'—')+' · '+relTime(tsDate(p.d.createdAt))+(canDel?' · <span class="flink fc-del" style="color:var(--red)">'+L('borrar','delete')+'</span>':'')+'</div>'
+        +'<div class="fbody">'+esc(p.d.body||'')+'</div>'
+        +'<div class="fc-foot"><span class="fvote"><button class="v-up" title="'+L('Útil','Useful')+'">▲</button><b class="v-score">·</b><button class="v-down" title="'+L('No útil','Not useful')+'">▼</button></span></div></div>'
+        +'<h4 class="fc-title">💬 '+L('Comentarios','Comments')+'</h4>'
+        +'<div class="fc-comments" id="f-detail-comments"></div></div>';
+      var post=host.querySelector('.fpost');
+      $('f-back').onclick=showForoList;
+      var del=host.querySelector('.fc-del'); if(del) del.onclick=function(){ if(!confirm(L('¿Borrar este tema?','Delete this topic?')))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
+      wireVote(post,ref);
+      loadComments(ref,$('f-detail-comments'));
     }
     function loadComments(ref,box){
       box.innerHTML='<div class="fmsg">'+L('Cargando…','Loading…')+'</div>';
@@ -1101,6 +1152,54 @@
       var craftRl=document.querySelector('#tab-craft label'); if(craftRl && /Retorno de recursos/.test(craftRl.textContent)) craftRl.textContent='Resource return';
       var qi=document.getElementById('q'); if(qi && qi.disabled) qi.placeholder='Loading game items…';
     })();
+
+    // ---------- Ayuda "?" en las columnas: circulito que abre un modal explicando la abreviatura ----------
+    var HELP={
+      roi:{t:['ROI','ROI'],b:['<b>ROI</b> (retorno sobre inversión): cuánto ganás en % sobre lo que ponés. Ej: 20% ROI = por cada 1.000 de plata invertida, ganás 200 de ganancia neta (ya con impuestos descontados).','<b>ROI</b> (return on investment): your profit as a % of what you put in. E.g. 20% ROI = for every 1,000 silver invested, you make 200 net profit (taxes already deducted).']},
+      ventamin:{t:['Venta mín.','Min. sell'],b:['El precio más <b>barato</b> al que alguien está vendiendo ese item ahora en esa ciudad (la orden de venta más baja). Es lo que <b>pagarías</b> si lo comprás al instante.','The <b>cheapest</b> price someone is currently selling that item for in that city (the lowest sell order). It\'s what you\'d <b>pay</b> to buy it instantly.']},
+      compramax:{t:['Compra máx.','Max. buy'],b:['El precio más <b>alto</b> que alguien está ofreciendo pagar por ese item ahora (la orden de compra más alta). Es lo que <b>cobrarías</b> si lo vendés al instante, sin esperar.','The <b>highest</b> price someone is currently offering to pay for that item (the highest buy order). It\'s what you\'d <b>get</b> if you sell it instantly, without waiting.']},
+      benef:{t:['Beneficio por unidad','Profit per unit'],b:['La ganancia <b>neta</b> por cada unidad, ya con el impuesto de venta y la comisión descontados. Es lo que te queda limpio en el bolsillo.','The <b>net</b> profit per unit, with sales tax and fees already deducted. What you actually keep.']},
+      confoco:{t:['Con foco','With focus'],b:['El resultado si usás <b>Puntos de Foco</b> al refinar/craftear. El foco aumenta el retorno de recursos (recuperás más materiales), así que rendís bastante más. Solo con cuenta <b>premium</b>.','The result if you use <b>Focus Points</b> when refining/crafting. Focus raises the resource return (you get more materials back), so you profit noticeably more. <b>Premium</b> only.']},
+      roifoco:{t:['ROI con foco','Focus ROI'],b:['El <b>ROI</b> cuando refinás/crafteás usando <b>Puntos de Foco</b>: más retorno de recursos = más ganancia sobre lo invertido.','The <b>ROI</b> when refining/crafting using <b>Focus Points</b>: higher resource return = more profit on what you invested.']},
+      datos:{t:['Datos','Data'],b:['Hace cuánto se <b>registró</b> este precio en el juego. Los precios los aportan jugadores con la app Albion Data Project, así que pueden estar viejos — cuanto <b>más reciente</b>, más confiable.','How long ago this price was <b>recorded</b> in-game. Prices are contributed by players via the Albion Data Project app, so they can be old — the <b>more recent</b>, the more reliable.']},
+      mnpaga:{t:['MN paga','BM pays'],b:['Cuánto está pagando el <b>Mercado Negro</b> de Caerleon por ese item (su orden de compra). El MN es un NPC que compra gear con plata; sus precios <b>suben con la actividad PvE</b> (horas pico).','How much Caerleon\'s <b>Black Market</b> is paying for that item (its buy order). The BM is an NPC that buys gear for silver; its prices <b>rise with PvE activity</b> (peak hours).']},
+      vendidosmn:{t:['Vendidos MN','BM sold'],b:['Cuántas unidades de ese item <b>compra el Mercado Negro por día</b> (volumen). Más = más fácil de colocar sin saturarlo. Si es muy bajo, no vendas mucho de golpe.','How many units of that item <b>the Black Market buys per day</b> (volume). More = easier to offload without saturating it. If it\'s very low, don\'t sell a lot at once.']},
+      listado:{t:['Listado','Listed'],b:['El precio al que está <b>publicado (listado)</b> ese item ahora mismo — la ganga que podés comprar en el momento.','The price the item is currently <b>posted (listed)</b> at — the deal you can buy right now.']},
+      media7d:{t:['Media 7d','7d median'],b:['El precio <b>promedio real</b> de los últimos 7 días (mediana), según el histórico de ventas del juego. Te dice a cuánto se revende <b>de verdad</b> (no un precio inventado).','The <b>real average</b> price of the last 7 days (median), from the game\'s sales history. Tells you what it <b>actually</b> resells for (not a made-up price).']},
+      descuento:{t:['Descuento','Discount'],b:['Cuánto <b>más barato</b> está el listado respecto de su media de 7 días. Más descuento = mejor ganga (comprás bajo y revendés al precio normal).','How much <b>cheaper</b> the listing is versus its 7-day median. Bigger discount = better deal (buy low, resell at the normal price).']},
+      ganrelist:{t:['Ganancia relist','Relist profit'],b:['Lo que ganás si comprás la ganga y la <b>volvés a listar</b> al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo), ya con impuesto y comisión descontados.','What you make if you buy the deal and <b>relist</b> it at market price in the <b>same city</b> (no transport, no risk), with tax and fee already deducted.']},
+      volumen:{t:['Volumen','Volume'],b:['Cuántas unidades se <b>venden por día</b>. Ojo con la <b>liquidez</b>: un descuentazo en algo de volumen bajo puede tardar días en revenderse.','How many units <b>sell per day</b>. Watch the <b>liquidity</b>: a huge discount on something low-volume can take days to resell.']}
+    };
+    function qh(key){ return '<span class="qh" data-q="'+key+'" role="button" tabindex="0" aria-label="'+L('Ayuda','Help')+'">?</span>'; }
+    function openHelp(key){
+      var h=HELP[key]; if(!h) return;
+      var old=$('help-ov'); if(old) old.remove();
+      var ov=document.createElement('div'); ov.id='help-ov';
+      ov.innerHTML='<div class="help-card"><button class="help-x" type="button" aria-label="'+L('Cerrar','Close')+'">×</button><h4>'+L(h.t[0],h.t[1])+'</h4><p>'+L(h.b[0],h.b[1])+'</p></div>';
+      document.body.appendChild(ov);
+      function close(){ ov.remove(); }
+      ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+      ov.querySelector('.help-x').onclick=close;
+    }
+    document.addEventListener('click',function(e){
+      var t=e.target; if(!t||!t.classList||!t.classList.contains('qh')) return;
+      e.preventDefault(); e.stopPropagation(); openHelp(t.getAttribute('data-q'));
+    });
+
+    // ---------- Tablas responsivas: en móvil cada fila se muestra como tarjeta "etiqueta: valor"
+    // (sin scroll horizontal). Copiamos el texto del encabezado a cada celda (data-label) y el CSS hace el resto. ----------
+    function labelizeTable(tbl){
+      var ths=[].map.call(tbl.querySelectorAll('thead th'),function(th){ var c=th.cloneNode(true); [].forEach.call(c.querySelectorAll('.qh'),function(q){ q.remove(); }); return c.textContent.trim(); });
+      if(!ths.length) return;
+      [].forEach.call(tbl.querySelectorAll('tbody tr'),function(tr){ [].forEach.call(tr.children,function(td,i){ if(ths[i]!=null) td.setAttribute('data-label',ths[i]); }); });
+    }
+    var _tblMo=new MutationObserver(function(muts){
+      muts.forEach(function(m){ [].forEach.call(m.addedNodes,function(n){ if(!n||n.nodeType!==1) return;
+        if(n.matches&&n.matches('table.ptable')) labelizeTable(n);
+        else if(n.querySelectorAll){ [].forEach.call(n.querySelectorAll('table.ptable'),labelizeTable); }
+      }); });
+    });
+    _tblMo.observe(document.body,{childList:true,subtree:true});
 
     // ---------- tabs (genérico) ----------
     document.querySelector('.tabs').addEventListener('click',function(ev){
