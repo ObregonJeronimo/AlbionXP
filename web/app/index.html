@@ -105,6 +105,17 @@
       color:var(--goldb);background:rgba(0,0,0,.55);border:1px solid var(--line2);border-radius:5px;padding:1px 5px;letter-spacing:.02em}
     .tile .nm{font-size:12px;color:var(--muted);line-height:1.25;max-height:2.5em;overflow:hidden}
     .hint{color:var(--faint);text-align:center;font-size:14px;padding:30px 0}
+    /* favoritos */
+    .favbar{max-width:820px;margin:12px auto 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+    .favbar .fav-lbl{width:100%;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);margin-bottom:2px}
+    .favbar .fav-empty{font-size:12.5px;color:var(--faint);text-align:center}
+    .favchip{display:inline-flex;align-items:center;gap:6px;background:var(--iron2);border:1px solid var(--line2);border-radius:20px;padding:4px 8px 4px 5px;cursor:pointer;font-size:13px;color:var(--text);transition:border-color .12s}
+    .favchip:hover{border-color:var(--gold)}
+    .favchip img{width:24px;height:24px}
+    .favchip .x{color:var(--faint);font-size:13px;padding:0 2px;border-radius:50%}
+    .favchip .x:hover{color:var(--red)}
+    .fav-star{margin-left:auto;background:transparent;border:0;color:var(--faint);font-size:24px;line-height:1;cursor:pointer;padding:0 4px;align-self:flex-start}
+    .fav-star.on{color:var(--gold);text-shadow:0 0 10px rgba(217,164,65,.5)}
     /* item panel */
     .panel{margin:16px 0 60px;background:var(--iron2);border:1px solid var(--line);border-radius:16px;overflow:hidden}
     .phead{display:flex;align-items:center;gap:16px;padding:18px 20px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.15)}
@@ -243,6 +254,7 @@
         <svg class="mag" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="q" type="text" autocomplete="off" placeholder="Cargando items del juego…" disabled />
       </div>
+      <div id="favbar" class="favbar"></div>
       <div id="results" class="results"></div>
       <div id="panel"></div>
     </section>
@@ -373,6 +385,7 @@
         ITEMS.push(e); BYID[id]=e;
       }
       var q=$('q'); q.disabled=false; q.placeholder='Buscá un item (ej: espada, lingote, bolsa…)'; q.focus();
+      renderFavs();
     }).catch(function(){
       $('q').placeholder='No se pudieron cargar los items — recargá la página.';
     });
@@ -413,6 +426,23 @@
       var t=ev.target.closest('.tile'); if(t) selectItem(t.dataset.id);
     });
 
+    // ---------- Favoritos (guardados en el navegador, sin login) ----------
+    var _favs=null;
+    function getFavs(){ if(_favs) return _favs; try{ _favs=JSON.parse(localStorage.getItem('fav_items')||'[]'); }catch(e){ _favs=[]; } if(!Array.isArray(_favs)) _favs=[]; return _favs; }
+    function saveFavs(){ try{ localStorage.setItem('fav_items', JSON.stringify(_favs)); }catch(e){} }
+    function isFav(id){ return getFavs().indexOf(id)>=0; }
+    function toggleFav(id){ var f=getFavs(); var i=f.indexOf(id); if(i>=0) f.splice(i,1); else f.unshift(id); if(f.length>40) f.length=40; saveFavs(); renderFavs(); }
+    function renderFavs(){
+      var bar=$('favbar'); if(!bar) return; var f=getFavs();
+      if(!f.length){ bar.innerHTML='<span class="fav-empty">☆ Marcá items con la estrella y quedan acá para chequear su precio al toque.</span>'; return; }
+      bar.innerHTML='<span class="fav-lbl">⭐ Tus favoritos</span>'+f.map(function(id){ var e=BYID[id]||{id:id,es:id,tier:parseTier(id),ench:parseEnch(id)};
+        return '<span class="favchip" data-id="'+esc(id)+'"><img loading="lazy" src="'+icon(id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(String(e.es||id).slice(0,24))+'<span class="x" data-rm="'+esc(id)+'" title="Quitar">✕</span></span>'; }).join('');
+    }
+    $('favbar').addEventListener('click',function(ev){
+      var rm=ev.target.closest('.x'); if(rm){ ev.stopPropagation(); toggleFav(rm.getAttribute('data-rm')); return; }
+      var chip=ev.target.closest('.favchip'); if(chip){ selectItem(chip.getAttribute('data-id')); var p=$('panel'); if(p) p.scrollIntoView({block:'nearest'}); }
+    });
+
     // ---------- panel de precios ----------
     var panel=$('panel');
     function fetchPrices(id,quality){
@@ -438,6 +468,7 @@
             '<img src="'+icon(e.id,STATE.quality)+'" alt=""/>'+
             '<div><h2>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(e.es)+'</h2>'+
               '<div class="sub">'+esc(e.id)+'</div></div>'+
+            '<button class="fav-star'+(isFav(e.id)?' on':'')+'" id="fav-star" title="Guardar en favoritos">'+(isFav(e.id)?'★':'☆')+'</button>'+
           '</div>'+
           '<div class="qtabs" id="qtabs">'+[1,2,3,4,5].map(function(q){
             return '<button class="qtab'+(q===STATE.quality?' on':'')+'" data-q="'+q+'">'+QNAMES[q]+'</button>';
@@ -449,6 +480,7 @@
         var b=ev.target.closest('.qtab'); if(!b) return;
         STATE.quality=+b.dataset.q; renderPanel();
       });
+      var star=$('fav-star'); if(star) star.onclick=function(){ toggleFav(e.id); var on=isFav(e.id); star.classList.toggle('on',on); star.textContent=on?'★':'☆'; };
       loadPrices(e);
     }
 

@@ -51,11 +51,14 @@
     if (!a || !a.key) return;
     if (window.matchMedia && !window.matchMedia('(max-width:900px)').matches) return; // solo móvil
     var GAP = 10 * 60 * 1000; // 10 minutos
+    var lastMem = 0; // respaldo EN MEMORIA por si el navegador bloquea localStorage
+                     // (incógnito / navegadores in-app): sin esto el interstitial spameaba cada minuto.
+    function getLast() { var ls = 0; try { ls = +localStorage.getItem('interst_last') || 0; } catch (e) {} return Math.max(ls, lastMem); }
+    function setLast() { lastMem = Date.now(); try { localStorage.setItem('interst_last', '' + lastMem); } catch (e) {} }
     function show() {
       if (document.getElementById('interst')) return;
-      var last = 0; try { last = +localStorage.getItem('interst_last') || 0; } catch (e) {}
-      if (Date.now() - last < GAP) return;
-      try { localStorage.setItem('interst_last', '' + Date.now()); } catch (e) {}
+      if (Date.now() - getLast() < GAP) return;
+      setLast();
       var o = document.createElement('div'); o.id = 'interst';
       var card = document.createElement('div'); card.className = 'interst-card';
       var x = document.createElement('button'); x.className = 'interst-x'; x.type = 'button';
@@ -66,8 +69,8 @@
       o.appendChild(x); o.appendChild(card);
       document.body.appendChild(o);
     }
-    setTimeout(show, 45000);      // primera aparición a los 45 s
-    setInterval(show, 60000);     // luego revisa cada minuto si ya pasaron los 10
+    setTimeout(show, 60000);      // primera aparición al minuto
+    setInterval(show, 60000);     // luego revisa cada minuto si ya pasaron los 10 (con guard en memoria)
   }
   // Modal de bienvenida, SOLO móvil, una sola vez (localStorage). Aparece ANTES
   // de cualquier anuncio y explica cómo monetizamos.
