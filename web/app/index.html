@@ -8,8 +8,6 @@
   <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Alegreya+Sans:wght@400;500;700&display=swap" />
   <link rel="stylesheet" href="../ads.css" />
-  <!-- Monetag In-Page Push (zona 11246499) — anuncios en la web -->
-  <script>(function(s){s.dataset.zone='11246499',s.src='https://nap5k.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
   <style>
     :root{
       --iron:#13110d;--iron2:#1a1610;--iron3:#211b13;--line:#372c1b;--line2:#4a3a22;
@@ -146,9 +144,16 @@
     .flink{color:var(--gold);cursor:pointer;font-size:13px}
     .fmsg{color:var(--muted);font-size:13px;text-align:center;padding:8px}
     footer{border-top:1px solid var(--line);text-align:center;color:var(--faint);font-size:13px;padding:26px 0 34px}
+    .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
     @media(max-width:640px){
-      .ptable th,.ptable td{padding:10px 12px}
-      .results{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+      .ptable{min-width:560px}                 /* la tabla mantiene ancho y el contenedor .tw scrollea, sin aplastar columnas */
+      .ptable th,.ptable td{padding:9px 11px;font-size:13px}
+      .rtable .icell img{width:26px;height:26px}
+      .results{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
+      .controls{gap:10px}
+      .desc{font-size:13.5px}
+      .phead{padding:14px}.phead img{width:48px;height:48px}.phead h2{font-size:17px}
+      .recbox{padding:14px 16px}
     }
   </style>
 </head>
@@ -455,9 +460,9 @@
 
         body.innerHTML =
           (hasAny ? '' : '<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Este item casi no se comercia en <b>'+QNAMES[STATE.quality]+'</b> ahora mismo. Suele pasar con armas de artefacto/Hell, encantamientos altos o ítems poco populares. Probá con un item más común, otra <b>calidad</b> (arriba) u otro <b>servidor</b>.</div>') +
-          '<table class="ptable"><thead><tr>'+
+          '<div class="tw"><table class="ptable"><thead><tr>'+
             '<th class="city">Ciudad</th><th>Venta mín.</th><th>Compra máx.</th><th>Datos</th>'+
-          '</tr></thead><tbody>'+rows+'</tbody></table>'+
+          '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
           '<p class="pnote">Verde = venta más barata · Rojo = compra más cara (mejor para vender al instante). '+
           'Los precios los aporta la comunidad y pueden estar viejos: mirá la columna "Datos". '+(STATE.premium?'':'Marcá "Premium" arriba si tenés la cuenta premium.')+
           (netHint?'<br>'+netHint:'')+'</p>';
@@ -533,9 +538,9 @@
             '<td class="'+(r.f.net>0?'pos':'neg')+'">'+fmt(r.f.net)+'</td><td class="'+(r.f.net>0?'pos':'neg')+'">'+Math.round(r.f.roi*100)+'%</td>'+
             '<td class="age">'+ageTxt(r.age)+'</td></tr>';
         }).join('');
-        out.innerHTML=rec+'<div class="panel"><table class="ptable rtable"><thead><tr>'+
+        out.innerHTML=rec+'<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr>'+
           '<th class="txt">Producto</th><th>Materia</th><th>Coste/u</th><th>Venta</th><th>Benef./u</th><th>ROI</th><th>Con foco</th><th>ROI foco</th><th>Datos</th>'+
-          '</tr></thead><tbody>'+bodyRows+'</tbody></table>'+
+          '</tr></thead><tbody>'+bodyRows+'</tbody></table></div>'+
           '<p class="pnote">Coste = materias × (1 − retorno '+(rrr*100).toFixed(1)+'%) + tarifa de estación, ya con impuesto de venta ('+(feeR*100).toFixed(1)+'%). El retorno de recursos actúa como descuento. '+(STATE.premium?'':'Marcá "Premium" arriba si tenés premium.')+'</p></div>';
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -552,58 +557,74 @@
     var GEAR=['2H_CLAYMORE','MAIN_SWORD','2H_AXE','2H_BOW','MAIN_FIRESTAFF','2H_ARCANESTAFF','MAIN_HOLYSTAFF','2H_NATURESTAFF','MAIN_SPEAR','MAIN_DAGGER','MAIN_HAMMER','2H_CROSSBOWLARGE','MAIN_CURSEDSTAFF','MAIN_FROSTSTAFF','ARMOR_PLATE_SET1','ARMOR_PLATE_SET2','ARMOR_LEATHER_SET1','ARMOR_LEATHER_SET2','ARMOR_CLOTH_SET1','ARMOR_CLOTH_SET2','HEAD_PLATE_SET1','HEAD_LEATHER_SET1','HEAD_CLOTH_SET1','SHOES_PLATE_SET1','SHOES_LEATHER_SET1','SHOES_CLOTH_SET1','BAG','CAPE'];
     function gearUniverse(tiers,ench){ var ids=[]; GEAR.forEach(function(l){ tiers.forEach(function(t){ ench.forEach(function(e){ ids.push(e>0?'T'+t+'_'+l+'@'+e:'T'+t+'_'+l); }); }); }); return ids; }
     function fresh2(p){ return p && p.sell_price_min && (''+p.sell_price_min_date).indexOf(NO_DATE)!==0; }
+    // Mediana del precio y volumen/día de una serie histórica (1 ciudad, 1 calidad).
+    // La MEDIANA resiste los precios fantasma que un promedio ponderado dispararía.
+    function medVol(series){ var m={}; (series||[]).forEach(function(s){ var pts=(s.data||[]).slice(-7).filter(function(p){return p.item_count>0&&p.avg_price>0;}); if(pts.length<2) return; var u=pts.reduce(function(a,p){return a+p.item_count;},0); if(u<12) return; var v=pts.map(function(p){return p.avg_price;}).sort(function(a,b){return a-b;}); var n=v.length; m[s.item_id]={med:(n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2), vol:u/7}; }); return m; }
 
     // ---------- TRANSPORTE / FLIP ----------
     $('flip-go').addEventListener('click',runFlip);
     function runFlip(){
-      var out=$('flip-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Comparando precios entre ciudades…</div>';
+      var out=$('flip-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Comparando precios y validando contra el histórico real…</div>';
       fetchPricesMulti(liquidUniverse(), CITIES, 1).then(function(prices){
         if(!Array.isArray(prices)){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
         var feeR=sellFees(STATE.premium), byItem={};
         prices.forEach(function(p){ if(!fresh2(p)) return; (byItem[p.item_id]=byItem[p.item_id]||[]).push({city:p.city,sell:p.sell_price_min,date:p.sell_price_min_date}); });
         var routes=[];
         Object.keys(byItem).forEach(function(id){ var rows=byItem[id], buy=null,sel=null;
-          rows.forEach(function(a){ if(!buy||a.sell<buy.sell) buy=a; });
-          rows.forEach(function(b){ if(b.city!==buy.city && (!sel||b.sell>sel.sell)) sel=b; });
+          rows.forEach(function(a){ if(a.sell>0&&(!buy||a.sell<buy.sell)) buy=a; });
+          rows.forEach(function(b){ if(buy&&b.city!==buy.city && (!sel||b.sell>sel.sell)) sel=b; });
           if(!buy||!sel) return;
+          if(sel.sell>buy.sell*30) return; // pre-filtro anti-fantasma
           var net=(sel.sell-1)*(1-feeR)-buy.sell; if(net<=0) return;
           var roi=net/buy.sell; if(roi<0.08) return;
           routes.push({id:id,bc:buy.city,bp:buy.sell,sc:sel.city,sp:sel.sell,net:net,roi:roi,date:sel.date});
         });
         routes.sort(function(a,b){ return b.roi-a.roi; });
-        var top=routes.slice(0,25);
-        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin rutas rentables ahora mismo. Probá otro servidor o volvé más tarde.</div>'; return; }
-        var body=top.map(function(r){
-          var warn=(r.bc==='Caerleon'||r.sc==='Caerleon')?' <span style="color:var(--red)">⚠</span>':'';
-          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
-            '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="txt">'+esc(r.sc)+' · '+fmt(r.sp)+warn+'</td>'+
-            '<td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
-        }).join('');
-        out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th class="txt">Vender en</th><th>Benef./u</th><th>ROI</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table>'+
-          '<p class="pnote">Comprás en la ciudad más barata y vendés con orden de venta en la más cara, tras impuesto ('+(feeR*100).toFixed(1)+'%). <span style="color:var(--red)">⚠</span> = pasa por Caerleon (zona roja: podés morir con la carga). Verificá el volumen antes de mover mucho.</p></div>';
+        var cand=routes.slice(0,60);
+        var byCity={}; cand.forEach(function(r){ (byCity[r.sc]=byCity[r.sc]||[]).push(r.id); });
+        var jobs=Object.keys(byCity).map(function(city){ return fetchHistoryMulti(byCity[city],city,24,1).then(function(s){ return {city:city,m:medVol(s)}; }).catch(function(){ return {city:city,m:{}}; }); });
+        Promise.all(jobs).then(function(res){
+          var hist={},haveHist=false; res.forEach(function(r){ Object.keys(r.m).forEach(function(id){ hist[r.city+'|'+id]=r.m[id]; haveHist=true; }); });
+          var valid=cand.filter(function(r){ var h=hist[r.sc+'|'+r.id]; if(!h) return !haveHist && r.sp<=r.bp*8; r.vol=h.vol; if(r.sp>h.med*2.5) return false; return true; });
+          var top=(valid.length?valid:cand.filter(function(r){ return r.sp<=r.bp*8; })).slice(0,25);
+          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Sin rutas <b>reales</b> ahora mismo (descartamos precios inventados). Probá otro servidor o volvé más tarde.</div>'; return; }
+          var body=top.map(function(r){
+            var warn=(r.bc==='Caerleon'||r.sc==='Caerleon')?' <span style="color:var(--red)">⚠</span>':'';
+            var vol=r.vol!=null?(fmt(Math.round(r.vol))+'/día'):'s/d';
+            return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
+              '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="txt">'+esc(r.sc)+' · '+fmt(r.sp)+warn+'</td>'+
+              '<td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td>'+vol+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
+          }).join('');
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th class="txt">Vender en</th><th>Benef./u</th><th>ROI</th><th>Vendidos</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+            '<p class="pnote">Comprás en la ciudad más barata y vendés en la más cara, tras impuesto ('+(feeR*100).toFixed(1)+'%). <b>Validado contra el histórico</b> (mediana y volumen de 7 días) para filtrar precios inventados. "Vendidos" = unidades/día que se mueven en la ciudad de venta (más = más fácil de vender). <span style="color:var(--red)">⚠</span> = pasa por Caerleon (zona roja: podés morir con la carga).</p></div>';
+        });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
     // ---------- MERCADO NEGRO ----------
     $('mn-go').addEventListener('click',runMN);
     function runMN(){
-      var out=$('mn-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el Mercado Negro…</div>';
+      var out=$('mn-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el Mercado Negro y validando contra el histórico…</div>';
       var ids=gearUniverse([4,5,6],[0,1]), instFee=instFees(STATE.premium);
       Promise.all([ fetchPricesMulti(ids, CITIES, 1), fetchPricesMulti(ids, ['Black Market'], 1) ]).then(function(a){
         if(!Array.isArray(a[0])||!Array.isArray(a[1])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
         var cheap={};
         a[0].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city}; });
         var opps=[];
-        a[1].forEach(function(p){ if(p.city!=='Black Market'||!p.buy_price_max||(''+p.buy_price_max_date).indexOf(NO_DATE)===0) return; var c=cheap[p.item_id]; if(!c) return; var net=p.buy_price_max*(1-instFee)-c.sell; if(net>2000) opps.push({id:p.item_id,bc:c.city,bp:c.sell,mn:p.buy_price_max,net:net,date:p.buy_price_max_date}); });
+        a[1].forEach(function(p){ if(p.city!=='Black Market'||!p.buy_price_max||(''+p.buy_price_max_date).indexOf(NO_DATE)===0) return; var c=cheap[p.item_id]; if(!c) return; if(p.buy_price_max>c.sell*30) return; var net=p.buy_price_max*(1-instFee)-c.sell; if(net>2000) opps.push({id:p.item_id,bc:c.city,bp:c.sell,mn:p.buy_price_max,net:net,date:p.buy_price_max_date}); });
         opps.sort(function(a,b){ return b.net-a.net; });
-        var top=opps.slice(0,30);
-        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Nada rentable hacia el MN ahora mismo. El MN sube sus órdenes con la actividad PvE: probá en horas pico u otro servidor.</div>'; return; }
-        var body=top.map(function(r){
-          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
-            '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
-        }).join('');
-        out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th>MN paga</th><th>Beneficio/u</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table>'+
-          '<p class="pnote">Comprás el equipo barato en la ciudad y lo vendés al instante al Mercado Negro (impuesto '+(instFee*100)+'%). Hay que llevarlo a <b>Caerleon</b> (zona roja): montura rápida y no cargues de más. Base calidad Normal.</p></div>';
+        var cand=opps.slice(0,60);
+        fetchHistoryMulti(cand.map(function(o){return o.id;}),'Black Market',24,1).then(function(series){ return medVol(series); }).catch(function(){ return {}; }).then(function(m){
+          var valid=cand.filter(function(o){ var h=m[o.id]; if(h){ o.vol=h.vol; return o.mn<=h.med*2.5; } return o.mn<=o.bp*12; });
+          var top=(valid.length?valid:cand).slice(0,30);
+          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Nada rentable hacia el MN ahora mismo. El MN sube sus órdenes con la actividad PvE: probá en horas pico u otro servidor.</div>'; return; }
+          var body=top.map(function(r){ var vol=r.vol!=null?(fmt(Math.round(r.vol))+'/día'):'s/d';
+            return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
+              '<td class="txt">'+esc(r.bc)+' · '+fmt(r.bp)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td>'+vol+'</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>';
+          }).join('');
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th class="txt">Comprar en</th><th>MN paga</th><th>Beneficio/u</th><th>Vendidos MN</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+            '<p class="pnote">Comprás el equipo barato en la ciudad y lo vendés al instante al Mercado Negro (impuesto '+(instFee*100)+'%), en <b>Caerleon</b> (zona roja): montura rápida y no cargues de más. <b>Validado contra el histórico del MN</b> (mediana + volumen) para filtrar órdenes fantasma. "Vendidos MN" = unidades/día en el Mercado Negro. Base calidad Normal.</p></div>';
+        });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
@@ -660,7 +681,7 @@
           return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
             '<td>'+fmt(r.units)+'</td><td class="bm">'+fmt(r.silver)+'</td><td>'+fmt(r.avg)+'</td></tr>';
         }).join('');
-        out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Unidades</th><th>Plata movida</th><th>Precio medio</th></tr></thead><tbody>'+body+'</tbody></table>'+
+        out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Unidades</th><th>Plata movida</th><th>Precio medio</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
           '<p class="pnote">Lo más comerciado en '+esc(city)+' en las últimas '+hours+' h (histórico de ventas del juego). Cruzá esto con <b>Transporte</b>: margen alto + volumen alto = la mejor ruta.</p></div>';
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -695,7 +716,7 @@
           if(!top.length){ out.innerHTML=nd+'Sin gangas ≥'+Math.round(minDisc*100)+'% en '+esc(city)+' ahora. Los mejores momentos son tras eventos y en horas pico; probá bajar el descuento mínimo.</div>'; return; }
           var liq=function(v){ return v>=20?'<span class="badge-r safe">líquido</span>':v>=5?'<span class="badge-r" style="background:rgba(217,164,65,.15);color:var(--gold);border:1px solid rgba(217,164,65,.4)">medio</span>':'<span class="badge-r risk">ilíquido</span>'; };
           var body=top.map(function(d){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(d.id,d.q)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(d.id))+' <span style="color:var(--muted)">·'+(QNAMES[d.q]||('q'+d.q))+'</span></span></td><td class="pos">'+fmt(d.price)+'</td><td>'+fmt(d.avg)+'</td><td class="pos">'+Math.round(d.disc*100)+'%</td><td class="pos">'+fmt(d.net)+'</td><td>'+fmt(Math.round(d.vol))+'/día '+liq(d.vol)+'</td></tr>'; }).join('');
-          out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Listado</th><th>Media 7d</th><th>Descuento</th><th>Ganancia relist</th><th>Volumen</th></tr></thead><tbody>'+body+'</tbody></table><p class="pnote">Comprás el item barato y lo relistás al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo de zona roja). Ganancia ya con impuesto y comisión descontados. <b>Cuidado con la liquidez</b>: un descuentazo en algo ilíquido puede tardar días en revenderse.</p></div>';
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Listado</th><th>Media 7d</th><th>Descuento</th><th>Ganancia relist</th><th>Volumen</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">Comprás el item barato y lo relistás al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo de zona roja). Ganancia ya con impuesto y comisión descontados. <b>Cuidado con la liquidez</b>: un descuentazo en algo ilíquido puede tardar días en revenderse.</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -726,7 +747,7 @@
           if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">Ningún crafteo rentable hacia el MN ahora mismo. Probá con foco (más retorno) o en horas pico de PvE, cuando el MN sube sus órdenes.</div>'; return; }
           rows.sort(function(a,b){ return b.net-a.net; });
           var body=rows.slice(0,40).map(function(r){ return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td><td>'+fmt(r.cost)+'</td><td class="bm">'+fmt(r.mn)+'</td><td class="pos">'+fmt(r.net)+'</td><td class="pos">'+Math.round(r.roi*100)+'%</td><td class="age">'+ageTxt(dataAge(r.date))+'</td></tr>'; }).join('');
-          out.innerHTML='<div class="panel"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Coste craft</th><th>MN paga</th><th>Beneficio/u</th><th>ROI</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table><p class="pnote">Materiales al precio más barato entre ciudades. Crafteá donde tengas especialización de esa línea y llevá el producto a <b>Caerleon</b> (zona roja). El crafteo sale calidad Normal ~69%; las calidades superiores rinden algo más. Retorno usado: '+(rrr*100).toFixed(1)+'%.</p></div>';
+          out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>Coste craft</th><th>MN paga</th><th>Beneficio/u</th><th>ROI</th><th>Datos</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">Materiales al precio más barato entre ciudades. Crafteá donde tengas especialización de esa línea y llevá el producto a <b>Caerleon</b> (zona roja). El crafteo sale calidad Normal ~69%; las calidades superiores rinden algo más. Retorno usado: '+(rrr*100).toFixed(1)+'%.</p></div>';
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
@@ -764,12 +785,12 @@
         var jobs=Object.keys(byCity).map(function(city){ return fetchHistoryMulti(byCity[city],city,24,1).then(function(series){ return {city:city,series:series}; }).catch(function(){ return {city:city,series:null}; }); });
         Promise.all(jobs).then(function(results){
           var hist={}, haveHist=false;
-          results.forEach(function(r){ if(!Array.isArray(r.series)) return; r.series.forEach(function(s){ var pts=(s.data||[]).slice(-7); if(!pts.length) return; var v=pts.reduce(function(x,p){return x+(p.item_count||0);},0); if(!v) return; haveHist=true; hist[r.city+'|'+s.item_id]={avg:pts.reduce(function(x,p){return x+p.avg_price*p.item_count;},0)/v,vol:v}; }); });
+          results.forEach(function(r){ var m=medVol(r.series); Object.keys(m).forEach(function(id){ hist[r.city+'|'+id]=m[id]; haveHist=true; }); });
           var valid=cand.filter(function(o){
             var h=hist[o.sellCity+'|'+o.id];
             if(!h) return !haveHist && o.sellPrice<=o.cap*8;   // sin histórico del item = casi seguro fantasma/muerto
-            if(h.vol<12) return false;                          // casi no se vende → precio no confiable
-            if(o.sellPrice>h.avg*2.5) return false;             // muy por encima de la media real → inventado
+            o.vol=h.vol;
+            if(o.sellPrice>h.med*2.5) return false;             // muy por encima de la mediana real → inventado
             return true;
           });
           var top=(valid.length?valid:cand.filter(function(o){ return o.sellPrice<=o.cap*8; })).slice(0,14);
@@ -782,7 +803,8 @@
               '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
               '<div class="body"><div class="mtag">'+o.m+(i===0?' · Recomendado ahora':'')+'</div>'+
                 '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?'zona roja':'seguro')+'</span></div>'+
-                '<div class="dt">'+esc(o.dt)+'</div></div>'+
+                '<div class="dt">'+esc(o.dt)+'</div>'+
+                (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">Movimiento: se venden ≈'+fmt(Math.round(o.vol))+'/día en '+esc(o.sellCity)+'</div>':'')+'</div>'+
               '<div class="num"><div class="p">+'+fmt(o.net)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · x'+fmt(per)+' ≈ '+fmt(o.net*per)+'</div></div></div>';
           }).join('');
           out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
