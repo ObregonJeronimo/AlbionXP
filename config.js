@@ -5,6 +5,9 @@ window.SITE = {
   // Banners laterales (Adsterra "Banner"). key + tamaño de la unidad. Se muestran
   // en los dos costados (solo en pantallas anchas). Vacío = espacio reservado.
   adsterra: { key: '1d84b06ebcdbf4d27880331ce7a9f3ea', width: 160, height: 600 },
+  // Interstitial: cuadrado centrado con X, cada ~10 min, SOLO en móvil (Adsterra Banner 300x250).
+  // Pegá la key de la unidad 300x250 para encenderlo (vacío = no aparece nada).
+  adsterraInterstitial: { key: '81e00be4e5da81db8ef08cce2a34d944', width: 300, height: 250 },
   contactEmail: 'jeroobregon03@gmail.com',
   // URL del worker de analítica (se rellena tras desplegar el worker). Vacío = sin conteo de visitas.
   analyticsUrl: 'https://albion-pagos.albionxp.workers.dev',
