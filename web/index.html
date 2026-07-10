@@ -17,6 +17,7 @@
     .donor{background:rgba(217,164,65,.07);border:1px solid #4a3a22;border-radius:12px;padding:11px 16px;max-width:300px;text-align:left}
     .donor .dn{font-family:'Cinzel',serif;color:#d9a441;font-weight:700;font-size:14px}
     .donor .dm{color:#9c9179;font-size:13px;margin-top:2px;font-style:italic}
+    .donor .damt{font-family:'Alegreya Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:#1a1305;background:#d9a441;border-radius:6px;padding:1px 7px;vertical-align:middle}
     .donor.empty{color:#9c9179;font-size:14px;background:transparent;border-style:dashed;text-align:center}
   </style>
 </head>
@@ -264,6 +265,7 @@
   </div>
 
   <script src="config.js"></script>
+  <script src="donate.js"></script>
   <script src="ads.js"></script>
   <script>
     (function () {
@@ -274,16 +276,22 @@
       var db = document.getElementById('donate-btn'); if (db) db.href = S.donateUrl || 'https://cafecito.app/albionxp';
       var wall = document.getElementById('donor-wall');
       if (wall) {
+        var fmtAmt = function (d) {
+          var a = Number(d.amount || 0); if (!a) return '';
+          if (d.currency === 'USDT') return '<span class="damt">' + a + ' USDT</span>';
+          if (d.currency === 'ARS') return '<span class="damt">$' + a.toLocaleString('es-AR') + '</span>';
+          return '';
+        };
         var renderW = function (ds) {
           wall.innerHTML = ds.length
-            ? ds.map(function (d) { return '<div class="donor"><div class="dn">☕ ' + esc(d.name || 'Anónimo') + '</div>' + (d.msg ? '<div class="dm">“' + esc(d.msg) + '”</div>' : '') + '</div>'; }).join('')
+            ? ds.map(function (d) { return '<div class="donor"><div class="dn">☕ ' + esc(d.name || 'Anónimo') + ' ' + fmtAmt(d) + '</div>' + (d.msg ? '<div class="dm">“' + esc(d.msg) + '”</div>' : '') + '</div>'; }).join('')
             : '<div class="donor empty">Todavía no hay donaciones — ¡sé el primero en aparecer en el muro! ☕</div>';
         };
-        // El muro se carga de Firestore (los dueños lo editan desde /admin). Fallback: config.donors.
+        // El muro se carga de Firestore (se llena solo con cada donación verificada). Fallback: config.donors.
         fetch('https://firestore.googleapis.com/v1/projects/albionxp-eef13/databases/(default)/documents/donors?key=AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU&pageSize=100')
           .then(function (r) { return r.json(); })
           .then(function (j) {
-            var docs = (j.documents || []).map(function (d) { var f = d.fields || {}; return { name: (f.name || {}).stringValue, msg: (f.msg || {}).stringValue, t: (f.createdAt || {}).timestampValue || '' }; });
+            var docs = (j.documents || []).map(function (d) { var f = d.fields || {}; return { name: (f.name || {}).stringValue, msg: (f.msg || {}).stringValue, amount: Number((f.amount || {}).doubleValue || (f.amount || {}).integerValue || 0), currency: (f.currency || {}).stringValue || '', t: (f.createdAt || {}).timestampValue || '' }; });
             docs.sort(function (a, b) { return a.t < b.t ? 1 : -1; });
             renderW(docs.length ? docs : (S.donors || []));
           })

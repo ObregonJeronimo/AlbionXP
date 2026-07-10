@@ -7,6 +7,11 @@ name = "albion-pagos"
 main = "worker.js"
 compatibility_date = "2026-01-01"
 
+# Cron: cada 2 min el worker escanea la blockchain de TRON buscando las donaciones
+# en USDT pendientes y las carga solas al muro. Si no configurás cripto, no hace nada.
+[triggers]
+crons = ["*/2 * * * *"]
+
 # Rate-limit nativo de Workers (GRATIS, funciona en *.workers.dev — a diferencia de
 # la Cache API). Limita /beat, /hit y /ads/track por IP para que un flujo abusivo no
 # pueda drenar la cuota de escrituras de Firestore (compartida con el foro).
@@ -43,6 +48,19 @@ GH_REPO = "ObregonJeronimo/AlbionXP"
 ADMIN_EMAILS = "thiagowendler53@gmail.com,jeroobregon03@gmail.com"
 PLAN_AMOUNT = "5000"
 PLAN_TITLE = "Albion Silver Hub — premium sin anuncios"
+# --- DONACIONES (muro automatico) ---
+# URL publica del sitio (para las back_urls de Mercado Pago tras donar).
+SITE_URL = "https://albion-xp.vercel.app"
+# Minimos (anti-spam del muro). MP en ARS, cripto en USDT.
+DONATE_MP_MIN = "5000"
+DONATE_USDT_MIN = "2"
+# Direccion de tu wallet USDT en red TRON (TRC-20) para recibir donaciones cripto.
+# DEJALA VACIA si no vas a usar cripto (el boton no aparece). Pega tu direccion T... para activarlo.
+DONATE_WALLET_TRC20 = ""
+# Secretos que necesita este modulo (van con `npx wrangler secret put NOMBRE`):
+#   MP_ACCESS_TOKEN  — token de produccion de Mercado Pago (pago unico de donaciones)
+#   MP_WEBHOOK_SECRET— (opcional) valida la firma del webhook de MP
+#   TRON_API_KEY     — (opcional) API key de TronGrid para subir el limite de consultas
 # El panel /admin usa LOGIN DE GOOGLE (solo los emails de ADMIN_EMAILS). El worker
 # valida el token de Google del lado del servidor, así ningún externo puede entrar.
 # ADMIN_KEY (secret, opcional) queda como respaldo por si querés entrar sin Google.

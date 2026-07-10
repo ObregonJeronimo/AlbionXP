@@ -55,11 +55,21 @@ export default {
       if (request.method === 'GET' && url.pathname === '/aodp') return await aodpProxy(request, url, env);
       // --- stats de Adsterra (ingresos) para el panel de admin: token seguro del lado servidor ---
       if (request.method === 'GET' && url.pathname === '/adsterra') return await adsterraStats(request, url, env);
+      // --- DONACIONES (muro automatico): MP pago unico + cripto USDT ---
+      if (request.method === 'GET' && url.pathname === '/donate/config') return donateConfig(env);
+      if (request.method === 'POST' && url.pathname === '/donate/mp') return await donateMpCreate(request, env);
+      if (request.method === 'POST' && url.pathname === '/donate/webhook') return await donateWebhook(request, env);
+      if (request.method === 'POST' && url.pathname === '/donate/crypto') return await donateCryptoInit(request, env);
       return json({ ok: true, service: 'albion-silver-hub-backend' });
     } catch (e) {
       console.log('ERROR', e.message);
       return json({ error: String(e.message || e) }, 500);
     }
+  },
+  // Cron (wrangler.toml [triggers]): escanea la blockchain buscando las donaciones
+  // en USDT pendientes y las carga al muro cuando llega el pago exacto.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(cryptoScan(env).catch(e => console.log('cryptoScan', e.message)));
   },
 };
 
@@ -423,6 +433,231 @@ async function adminStats(request, url, env) {
     },
     updatedAt: new Date().toISOString(),
   });
+}
+
+// ============================================================================
+//  DONACIONES (reemplazo de Cafecito) — muro AUTOMATICO, el dueño no verifica nada
+//  Dos rieles:
+//   1) Mercado Pago (ARS, pago unico): /donate/mp crea la preferencia -> paga en MP
+//      -> MP notifica a /donate/webhook -> se verifica con la API de MP -> se
+//      escribe en donors/ (aparece en el muro).
+//   2) Cripto USDT (TRC-20): /donate/crypto guarda un pendiente con un MONTO UNICO
+//      (ej 2.037) -> el usuario transfiere ese monto exacto -> el cron cryptoScan
+//      mira la blockchain, matchea por monto y carga la donacion al muro.
+//  Anti-spam: monto minimo (MP 5000 ARS, cripto 2 USD) + limpieza del comentario.
+// ============================================================================
+const USDT_TRC20 = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // contrato oficial USDT en TRON
+function mpMin(env) { return Number(env.DONATE_MP_MIN || 5000); }      // ARS
+function usdtMin(env) { return Number(env.DONATE_USDT_MIN || 2); }      // USD
+function siteUrl(env) { return env.SITE_URL || 'https://albion-xp.vercel.app'; }
+
+// Limpia nombre/comentario que va al muro PUBLICO: sin HTML, sin control chars,
+// largo acotado y un filtro minimo de groserias (se enmascaran, no se rechaza).
+const BADWORDS = ['puto', 'puta', 'mierda', 'concha', 'verga', 'pija', 'boludo', 'forro', 'nigger', 'fuck', 'shit', 'bitch', 'cunt', 'faggot'];
+function cleanText(s, max) {
+  s = String(s == null ? '' : s).replace(/[\x00-\x1f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+  for (const w of BADWORDS) {
+    s = s.replace(new RegExp(w, 'gi'), m => m[0] + '*'.repeat(Math.max(1, m.length - 1)));
+  }
+  return s;
+}
+function cleanName(s) { return cleanText(s, 40) || 'Anónimo'; }
+function cleanMsg(s) { return cleanText(s, 160); }
+
+// GET /donate/config — el front pregunta que metodos hay activos y los minimos.
+function donateConfig(env) {
+  const wallet = env.DONATE_WALLET_TRC20 || '';
+  return json({
+    mp: !!env.MP_ACCESS_TOKEN,
+    mpMin: mpMin(env),
+    crypto: !!wallet,
+    usdtMin: usdtMin(env),
+    wallet,
+    network: 'USDT · TRON (TRC-20)',
+  });
+}
+
+// POST /donate/mp  { name, msg, amount }  -> { init_point }
+async function donateMpCreate(request, env) {
+  if (await tooFrequent(request, env, 'donate')) return json({ error: 'Esperá unos segundos e intentá de nuevo.' }, 429);
+  if (!env.MP_ACCESS_TOKEN) return json({ error: 'Mercado Pago no está configurado.' }, 503);
+  const b = await request.json().catch(() => ({}));
+  const amount = Math.floor(Number(b.amount) || 0);
+  if (!(amount >= mpMin(env))) return json({ error: `El mínimo por Mercado Pago es $${mpMin(env)} ARS.` }, 400);
+  if (amount > 5000000) return json({ error: 'Monto demasiado alto.' }, 400);
+  const id = crypto.randomUUID();
+  const name = cleanName(b.name), msg = cleanMsg(b.msg);
+  // Guardamos nombre/comentario ANTES de mandar a pagar (no confiamos en el ida y vuelta de MP).
+  await fsWrite(env, 'pending_mp', id, {
+    name: { stringValue: name }, msg: { stringValue: msg },
+    amount: { integerValue: String(amount) }, createdAt: { integerValue: String(Date.now()) },
+  });
+  const origin = new URL(request.url).origin;
+  const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.MP_ACCESS_TOKEN}` },
+    body: JSON.stringify({
+      items: [{ title: 'Donación — Albion Silver Hub', quantity: 1, unit_price: amount, currency_id: 'ARS' }],
+      external_reference: id,
+      metadata: { kind: 'donation' },
+      notification_url: `${origin}/donate/webhook`,
+      back_urls: { success: siteUrl(env), pending: siteUrl(env), failure: siteUrl(env) },
+      auto_return: 'approved',
+      statement_descriptor: 'ALBIONHUB',
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.init_point) {
+    console.log('MP donate error', JSON.stringify(data).slice(0, 400));
+    return json({ error: data.message || 'No se pudo crear el pago.' }, 502);
+  }
+  return json({ init_point: data.init_point, id });
+}
+
+// POST /donate/webhook — MP notifica el pago. Verificamos con la API (nunca confiamos
+// en el payload) y, si está aprobado y llega al mínimo, lo cargamos al muro.
+async function donateWebhook(request, env) {
+  const url = new URL(request.url);
+  const body = await request.json().catch(() => ({}));
+  const type = body.type || body.topic || url.searchParams.get('type') || url.searchParams.get('topic') || '';
+  const payId = body.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id');
+  if (!/payment/i.test(type) || !payId) return json({ ok: true, ignored: true });
+
+  const r = await fetch(`https://api.mercadopago.com/v1/payments/${payId}`, {
+    headers: { Authorization: `Bearer ${env.MP_ACCESS_TOKEN}` } });
+  if (!r.ok) return json({ ok: false, error: 'pago no encontrado' }, 200);
+  const pay = await r.json();
+  const id = pay.external_reference;
+  const approved = ['approved', 'accredited'].includes(pay.status);
+  if (!id || !approved) return json({ ok: true, ignored: pay.status || 'sin ref' });
+
+  // Recuperamos el nombre/comentario que guardamos al crear el pago.
+  const pend = await fsGet(env, 'pending_mp', id);
+  if (!pend) return json({ ok: true, ignored: 'sin pendiente (ya procesado)' });
+  const amount = Number(pay.transaction_amount) || 0;
+  if (amount < mpMin(env)) { await fsDelete(env, 'pending_mp', id); return json({ ok: true, ignored: 'bajo el minimo' }); }
+
+  await writeDonor(env, id, {
+    name: pend.name?.stringValue || 'Anónimo',
+    msg: pend.msg?.stringValue || '',
+    amount, currency: 'ARS', method: 'mp',
+  });
+  await fsDelete(env, 'pending_mp', id);
+  return json({ ok: true });
+}
+
+// POST /donate/crypto  { name, msg, usd }  -> { address, network, exactAmount, id, expiresMin }
+async function donateCryptoInit(request, env) {
+  if (await tooFrequent(request, env, 'donate')) return json({ error: 'Esperá unos segundos e intentá de nuevo.' }, 429);
+  const wallet = env.DONATE_WALLET_TRC20;
+  if (!wallet) return json({ error: 'Las donaciones en cripto no están configuradas.' }, 503);
+  const b = await request.json().catch(() => ({}));
+  const usd = Number(b.usd) || 0;
+  if (!(usd >= usdtMin(env))) return json({ error: `El mínimo en cripto es ${usdtMin(env)} USDT.` }, 400);
+  if (usd > 100000) return json({ error: 'Monto demasiado alto.' }, 400);
+  const id = crypto.randomUUID();
+  // Monto UNICO: base + un sufijo de milésimas (1..999) para poder matchear el pago
+  // en la blockchain sin depender de memo (TRON no lleva memo en TRC-20).
+  const tag = (parseInt(id.replace(/-/g, '').slice(0, 6), 16) % 999) + 1; // 1..999, derivado del id (sin Math.random)
+  const exactAmount = Math.round((Math.floor(usd) + tag / 1000) * 1000) / 1000; // ej 2.037
+  await fsWrite(env, 'pending_cry', id, {
+    name: { stringValue: cleanName(b.name) }, msg: { stringValue: cleanMsg(b.msg) },
+    expected: { doubleValue: exactAmount }, usd: { doubleValue: Math.floor(usd) },
+    createdAt: { integerValue: String(Date.now()) },
+  });
+  return json({ id, address: wallet, network: 'USDT · TRON (TRC-20)', exactAmount, expiresMin: 60 });
+}
+
+// Cron: mira las transferencias entrantes de USDT (TRC-20) a la wallet y matchea
+// cada pendiente por su monto EXACTO. Al matchear, lo carga al muro y borra el pendiente.
+async function cryptoScan(env) {
+  const wallet = env.DONATE_WALLET_TRC20;
+  if (!wallet) return;
+  const pend = await fsList(env, 'pending_cry', 100);
+  if (!pend.length) return;
+  const now = Date.now();
+  // Transferencias entrantes recientes de USDT a la wallet (TronGrid).
+  const headers = env.TRON_API_KEY ? { 'TRON-PRO-API-KEY': env.TRON_API_KEY } : {};
+  const tr = await fetch(`https://api.trongrid.io/v1/accounts/${wallet}/transactions/trc20?limit=100&only_to=true&contract_address=${USDT_TRC20}`, { headers })
+    .then(r => r.json()).catch(() => ({}));
+  const txs = (tr && tr.data) || [];
+  const incoming = txs.map(t => ({
+    amount: Number(t.value) / Math.pow(10, Number(t.token_info?.decimals) || 6),
+    ts: Number(t.block_timestamp) || 0,
+    hash: t.transaction_id,
+  })).filter(t => t.amount > 0);
+
+  for (const d of pend) {
+    const f = d.fields || {};
+    const created = Number(f.createdAt?.integerValue || 0);
+    // Expirado (>60 min sin pago): lo borramos para no dejar basura.
+    if (now - created > 60 * 60 * 1000) { await fsDelete(env, 'pending_cry', d.id); continue; }
+    const expected = Number(f.expected?.doubleValue || 0);
+    if (!expected) continue;
+    // Buscamos una transferencia con el monto exacto, posterior a la creación del pendiente.
+    const hit = incoming.find(t => Math.abs(t.amount - expected) < 0.0005 && t.ts >= created - 5 * 60 * 1000);
+    if (!hit) continue;
+    await writeDonor(env, d.id, {
+      name: f.name?.stringValue || 'Anónimo',
+      msg: f.msg?.stringValue || '',
+      amount: expected, currency: 'USDT', method: 'crypto',
+    });
+    await fsDelete(env, 'pending_cry', d.id);
+    console.log('cripto donacion cargada', d.id, expected);
+  }
+}
+
+// Escribe un donante en el muro (donors/{id}). Mismos campos que lee la landing
+// (name, msg, createdAt) + amount/currency/method para mostrar cuánto donó.
+async function writeDonor(env, id, d) {
+  const base = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const fields = {
+    name: { stringValue: d.name || 'Anónimo' },
+    msg: { stringValue: d.msg || '' },
+    amount: { doubleValue: Number(d.amount) || 0 },
+    currency: { stringValue: d.currency || '' },
+    method: { stringValue: d.method || '' },
+    createdAt: { timestampValue: new Date().toISOString() },
+  };
+  const res = await fetch(`https://firestore.googleapis.com/v1/${base}/donors/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) throw new Error(`donor write ${res.status}: ${(await res.text()).slice(0, 200)}`);
+}
+
+// --- Helpers Firestore genéricos (con service account, saltan las reglas) ---
+async function fsWrite(env, col, id, fields) {
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const base = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+  const res = await fetch(`https://firestore.googleapis.com/v1/${base}/${col}/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) throw new Error(`fsWrite ${col} ${res.status}`);
+}
+async function fsGet(env, col, id) {
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const base = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+  const r = await fetch(`https://firestore.googleapis.com/v1/${base}/${col}/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) return null;
+  return (await r.json()).fields || null;
+}
+async function fsDelete(env, col, id) {
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const base = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+  await fetch(`https://firestore.googleapis.com/v1/${base}/${col}/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+}
+async function fsList(env, col, pageSize) {
+  const token = await googleAccessToken(env, 'https://www.googleapis.com/auth/datastore');
+  const base = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+  const r = await fetch(`https://firestore.googleapis.com/v1/${base}/${col}?pageSize=${pageSize || 100}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) return [];
+  const docs = (await r.json()).documents || [];
+  return docs.map(d => ({ id: d.name.split('/').pop(), fields: d.fields || {} }));
 }
 
 // ---------- Firestore write with service account (bypasses security rules) ----------
