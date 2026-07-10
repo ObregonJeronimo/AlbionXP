@@ -36,6 +36,8 @@
     header a.back:hover{color:var(--goldb)}
     .hdon{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.06em;color:#1a1305;background:linear-gradient(180deg,var(--goldb),var(--gold));border-radius:8px;padding:6px 13px;text-decoration:none;white-space:nowrap}
     .hdon:hover{filter:brightness(1.07)}
+    .langbtn{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.04em;color:var(--gold);background:var(--iron3);border:1px solid var(--line2);border-radius:8px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+    .langbtn:hover{border-color:var(--gold)}
     /* intro */
     .intro{padding:34px 0 8px;text-align:center}
     .intro .eyebrow2{display:inline-block;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:9px;opacity:.85}
@@ -201,6 +203,7 @@
     <div class="wrap">
       <a class="brand" href="../index.html"><span class="sigil">⚔️</span> Albion <b>Silver Hub</b></a>
       <span class="sp"></span>
+      <button class="langbtn" id="lang-toggle" type="button" title="Idioma / Language">🌐 EN</button>
       <a class="hdon" href="https://cafecito.app/albionxp" target="_blank" rel="noopener">☕ Donar</a>
       <a class="back" href="../index.html">← Inicio</a>
     </div>
@@ -348,7 +351,14 @@
     var ITEMS_URL = 'https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json';
     var CITIES = ['Bridgewatch','Fort Sterling','Lymhurst','Martlock','Thetford','Caerleon','Brecilien'];
     var LOCS = CITIES.concat(['Black Market']);
-    var QNAMES = {1:'Normal',2:'Bueno',3:'Notable',4:'Excelente',5:'Obra maestra'};
+    var QNAMES_ES = {1:'Normal',2:'Bueno',3:'Notable',4:'Excelente',5:'Obra maestra'};
+    var QNAMES_EN = {1:'Normal',2:'Good',3:'Outstanding',4:'Excellent',5:'Masterpiece'};
+    // Idioma: 'es' (default) o 'en'. En inglés, los NOMBRES DE ITEMS usan el nombre oficial
+    // de Albion (e.en, del volcado del juego), no una traducción genérica.
+    var LANG = (function(){ try{ return localStorage.getItem('lang')==='en'?'en':'es'; }catch(e){ return 'es'; } })();
+    var QNAMES = LANG==='en' ? QNAMES_EN : QNAMES_ES;
+    function iName(e){ if(!e) return ''; return LANG==='en' ? (e.en||e.es||e.id) : (e.es||e.en||e.id); }
+    function L(es,en){ return LANG==='en'?en:es; }
     var NO_DATE = '0001-01-01';
 
     var ITEMS = [], BYID = {};
@@ -384,7 +394,7 @@
         e.key = norm(es)+' '+norm(e.en)+' '+id.toLowerCase();
         ITEMS.push(e); BYID[id]=e;
       }
-      var q=$('q'); q.disabled=false; q.placeholder='Buscá un item (ej: espada, lingote, bolsa…)'; q.focus();
+      var q=$('q'); q.disabled=false; q.placeholder=L('Buscá un item (ej: espada, lingote, bolsa…)','Search an item (e.g. sword, bar, bag…)'); q.focus();
       renderFavs();
     }).catch(function(){
       $('q').placeholder='No se pudieron cargar los items — recargá la página.';
@@ -413,7 +423,7 @@
         return '<button class="tile'+(e.id===STATE.id?' sel':'')+'" data-id="'+esc(e.id)+'">'+
           (e.tier?'<span class="tag">'+tierTag(e.tier,e.ench)+'</span>':'')+
           '<img loading="lazy" src="'+icon(e.id,1)+'" alt="" onerror="this.style.visibility=\'hidden\'"/>'+
-          '<span class="nm">'+esc(e.es)+'</span></button>';
+          '<span class="nm">'+esc(iName(e))+'</span></button>';
       }).join('');
     }
 
@@ -434,9 +444,9 @@
     function toggleFav(id){ var f=getFavs(); var i=f.indexOf(id); if(i>=0) f.splice(i,1); else f.unshift(id); if(f.length>40) f.length=40; saveFavs(); renderFavs(); }
     function renderFavs(){
       var bar=$('favbar'); if(!bar) return; var f=getFavs();
-      if(!f.length){ bar.innerHTML='<span class="fav-empty">☆ Marcá items con la estrella y quedan acá para chequear su precio al toque.</span>'; return; }
-      bar.innerHTML='<span class="fav-lbl">⭐ Tus favoritos</span>'+f.map(function(id){ var e=BYID[id]||{id:id,es:id,tier:parseTier(id),ench:parseEnch(id)};
-        return '<span class="favchip" data-id="'+esc(id)+'"><img loading="lazy" src="'+icon(id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(String(e.es||id).slice(0,24))+'<span class="x" data-rm="'+esc(id)+'" title="Quitar">✕</span></span>'; }).join('');
+      if(!f.length){ bar.innerHTML='<span class="fav-empty">'+L('☆ Marcá items con la estrella y quedan acá para chequear su precio al toque.','☆ Star items to keep them here and check their price in one tap.')+'</span>'; return; }
+      bar.innerHTML='<span class="fav-lbl">'+L('⭐ Tus favoritos','⭐ Your favorites')+'</span>'+f.map(function(id){ var e=BYID[id]||{id:id,es:id,tier:parseTier(id),ench:parseEnch(id)};
+        return '<span class="favchip" data-id="'+esc(id)+'"><img loading="lazy" src="'+icon(id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(String(iName(e)||id).slice(0,24))+'<span class="x" data-rm="'+esc(id)+'" title="'+L('Quitar','Remove')+'">✕</span></span>'; }).join('');
     }
     $('favbar').addEventListener('click',function(ev){
       var rm=ev.target.closest('.x'); if(rm){ ev.stopPropagation(); toggleFav(rm.getAttribute('data-rm')); return; }
@@ -466,7 +476,7 @@
         '<div class="panel">'+
           '<div class="phead">'+
             '<img src="'+icon(e.id,STATE.quality)+'" alt=""/>'+
-            '<div><h2>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(e.es)+'</h2>'+
+            '<div><h2>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(iName(e))+'</h2>'+
               '<div class="sub">'+esc(e.id)+'</div></div>'+
             '<button class="fav-star'+(isFav(e.id)?' on':'')+'" id="fav-star" title="Guardar en favoritos">'+(isFav(e.id)?'★':'☆')+'</button>'+
           '</div>'+
@@ -546,7 +556,7 @@
     function stFee(iv,f){ return iv*0.1125*(f/100); }
     function rawId(res,t,e){ var b='T'+t+'_'+res; return e>0?b+'_LEVEL'+e+'@'+e:b; }
     function refId(res,t,e){ var b='T'+t+'_'+REFID[res]; return e>0?b+'_LEVEL'+e+'@'+e:b; }
-    function webName(id){ var e=BYID[id]; var base=e?e.es:id; var tag=tierTag(parseTier(id),parseEnch(id)); return (tag?tag+' ':'')+base; }
+    function webName(id){ var e=BYID[id]; var base=e?iName(e):id; var tag=tierTag(parseTier(id),parseEnch(id)); return (tag?tag+' ':'')+base; }
 
     function refCityOpts(){
       var bonus=REF_CITY[$('ref-res').value];
@@ -1012,6 +1022,46 @@
         fbDb.collection('posts').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),title:t.slice(0,140),body:b.slice(0,5000),createdAt:firebase.firestore.FieldValue.serverTimestamp()})
           .then(function(){ showForoList(); }).catch(function(e){ $('f-send').disabled=false; $('f-msg').textContent=fbErr(e); }); };
     }
+
+    // ---------- idioma (EN opcional). Nombres de items = oficiales de Albion (e.en). ----------
+    (function(){
+      var lt=$('lang-toggle');
+      if(lt){ lt.textContent = LANG==='en' ? '🌐 ES' : '🌐 EN';
+        lt.onclick=function(){ try{ localStorage.setItem('lang', LANG==='en'?'es':'en'); }catch(e){} location.reload(); }; }
+      if(LANG!=='en') return;
+      document.documentElement.setAttribute('lang','en');
+      var TABS_EN={plan:'Plan',precios:'Prices',refinado:'Refining',craft:'Crafting',transporte:'Transport',mn:'Black Market',sniper:'Sniper',mov:'Movement',oro:'Gold',foro:'Community'};
+      [].forEach.call(document.querySelectorAll('.tab'),function(t){ var k=t.getAttribute('data-tab'); if(TABS_EN[k]) t.textContent=TABS_EN[k]; });
+      var intro=document.querySelector('.intro');
+      if(intro){ var eb=intro.querySelector('.eyebrow2'); if(eb) eb.textContent='Market · Albion Online';
+        var h1=intro.querySelector('h1'); if(h1) h1.innerHTML='Albion Silver Hub <span class="ag">on the web</span>';
+        var ip=intro.querySelector('p'); if(ip) ip.textContent='Tools to make silver in Albion Online, right in your browser. Nothing to install.'; }
+      var sl=document.querySelector('#globalctl label'); if(sl) sl.firstChild.textContent='Server';
+      var chk=document.querySelector('#globalctl .chk'); if(chk){ var tn=chk.childNodes[chk.childNodes.length-1]; if(tn && tn.nodeType===3) tn.textContent=' I have Premium (4% tax)'; }
+      var srvOpts={west:'America (West)',europe:'Europe',east:'Asia (East)'};
+      [].forEach.call(document.querySelectorAll('#server option'),function(o){ if(srvOpts[o.value]) o.textContent=srvOpts[o.value]; });
+      var back=document.querySelector('header a.back'); if(back) back.textContent='← Home';
+      var don=document.querySelector('.hdon'); if(don) don.textContent='☕ Donate';
+      var DESC={
+        plan:'<b>What\'s worth doing NOW.</b> We scan the live market and rank the best real opportunities right now (transport + black market) for your capital. Not templates: it changes all the time with the market.',
+        precios:'<b>Compare prices.</b> Search an item and see its price in every city and the Black Market. Tip: green = where to buy it cheapest · red = where to sell it dearest.',
+        refinado:'<b>Refine to profit.</b> Buy raw materials, refine them in the bonus city ★ and sell the product. Tip: if you have <b>focus</b>, use it — the return nearly doubles.',
+        craft:'<b>Craft to sell.</b> Using the game\'s real recipes, I work out which gear is worth crafting and selling to the Black Market. Tip: craft in the city specialized in that line (more return) and use focus if you can.',
+        transporte:'<b>Cross-city arbitrage.</b> Buy cheap in one city and sell dear in another. Tip: if the route goes through Caerleon (⚠ red zone) and you carry a lot, watch out for getting killed.',
+        mn:'<b>Sell to the Black Market.</b> Caerleon\'s BM usually pays more for gear than the cities. Tip: it\'s a red zone — bring a fast mount and don\'t overload.',
+        sniper:'<b>Hunt for deals.</b> Items listed well below their average price: buy them and instantly relist in the same city (no transport). Tip: check liquidity — a huge discount on something nobody buys is a trap.',
+        mov:'<b>Where the demand is.</b> What\'s traded the most in each market right now. Tip: cross it with Transport — high margin + high volume = the best route.',
+        oro:'<b>Investing in gold.</b> Gold is bought and sold with silver, tax-free — the game\'s "clean" investment. Tip: buy when it\'s below its average, sell on the peaks.',
+        foro:'<b>Community.</b> Share routes, questions and findings with other players. Anyone can read; to post, comment or vote, sign in with Google. It\'s moderated to keep it clean.'
+      };
+      Object.keys(DESC).forEach(function(k){ var d=document.querySelector('#tab-'+k+' .desc'); if(d) d.innerHTML=DESC[k]; });
+      var BTN={'plan-go':'See what\'s worth it now','ref-go':'Calculate','craft-go':'Scan crafting → Black Market','flip-go':'Find transport routes','mn-go':'Scan Black Market','snp-go':'Find deals'};
+      Object.keys(BTN).forEach(function(id){ var b=document.getElementById(id); if(b) b.textContent=BTN[id]; });
+      var LBL={'¿Cuánto capital tenés?':'How much capital do you have?','Ciudad':'City','Descuento mín.':'Min. discount','Tier':'Tier','Ventana':'Window','Con foco':'With focus'};
+      [].forEach.call(document.querySelectorAll('#tab-plan label,#tab-refinado label,#tab-craft label,#tab-transporte label,#tab-mn label,#tab-sniper label,#tab-mov label'),function(l){ var k=(l.textContent||'').trim(); if(LBL[k]) l.textContent=LBL[k]; });
+      var CAP={'200 mil (empezando)':'200k (starting)','1 millón':'1 million','5 millones':'5 million','20 millones':'20 million'};
+      [].forEach.call(document.querySelectorAll('#plan-cap option'),function(o){ var k=(o.textContent||'').trim(); if(CAP[k]) o.textContent=CAP[k]; });
+    })();
 
     // ---------- tabs (genérico) ----------
     document.querySelector('.tabs').addEventListener('click',function(ev){
