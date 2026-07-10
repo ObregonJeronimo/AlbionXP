@@ -274,10 +274,20 @@
       var db = document.getElementById('donate-btn'); if (db) db.href = S.donateUrl || 'https://cafecito.app/albionxp';
       var wall = document.getElementById('donor-wall');
       if (wall) {
-        var ds = S.donors || [];
-        wall.innerHTML = ds.length
-          ? ds.map(function (d) { return '<div class="donor"><div class="dn">☕ ' + esc(d.name || 'Anónimo') + '</div>' + (d.msg ? '<div class="dm">“' + esc(d.msg) + '”</div>' : '') + '</div>'; }).join('')
-          : '<div class="donor empty">Todavía no hay donaciones — ¡sé el primero en aparecer en el muro! ☕</div>';
+        var renderW = function (ds) {
+          wall.innerHTML = ds.length
+            ? ds.map(function (d) { return '<div class="donor"><div class="dn">☕ ' + esc(d.name || 'Anónimo') + '</div>' + (d.msg ? '<div class="dm">“' + esc(d.msg) + '”</div>' : '') + '</div>'; }).join('')
+            : '<div class="donor empty">Todavía no hay donaciones — ¡sé el primero en aparecer en el muro! ☕</div>';
+        };
+        // El muro se carga de Firestore (los dueños lo editan desde /admin). Fallback: config.donors.
+        fetch('https://firestore.googleapis.com/v1/projects/albionxp-eef13/databases/(default)/documents/donors?key=AIzaSyDoHnt236PRLeeTem_NwUUb1iu0XHzqxNU&pageSize=100')
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            var docs = (j.documents || []).map(function (d) { var f = d.fields || {}; return { name: (f.name || {}).stringValue, msg: (f.msg || {}).stringValue, t: (f.createdAt || {}).timestampValue || '' }; });
+            docs.sort(function (a, b) { return a.t < b.t ? 1 : -1; });
+            renderW(docs.length ? docs : (S.donors || []));
+          })
+          .catch(function () { renderW(S.donors || []); });
       }
       // Scroll reveal
       var io = new IntersectionObserver(function (es) {
