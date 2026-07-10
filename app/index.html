@@ -922,28 +922,34 @@
     function renderPlanCards(){
       if(!planData||!planData.length) return;
       var cap=+$('plan-cap').value, out=$('plan-results');
-      var lowCap=cap<500000;
-      var tip=lowCap?L('Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.','With little capital, start with <b>high ROI and low buy price</b>: invest little and reinvest your gains. The Black Market (red zone) is better once you have more.'):L('Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).','With your capital you can scale: repeat the best routes with volume (watch the item\'s real volume — don\'t overexpose yourself).');
-      var cards=planData.map(function(o,i){
-        // Cantidad = lo que te alcanza con tu capital, pero SIN pasarte de lo que se vende por día
-        // (para que puedas revenderlo de verdad). Tope de cordura por las dudas.
+      // Calculamos con el capital actual. La cantidad es CONSERVADORA a propósito: el AODP solo nos da
+      // el precio MÁS BAJO, no cuántas unidades hay a ese precio (a ese precio suele haber pocas). Por eso
+      // no asumimos que podés comprar todo el volumen del día a ese precio.
+      var list=planData.map(function(o){
         var afford=Math.floor(cap/Math.max(1,o.cap));
-        var volCap=(o.vol!=null)?Math.max(1,Math.round(o.vol)):Infinity;
-        var qty=Math.max(1,Math.min(afford,volCap,5000));
-        var inv=qty*o.cap, gain=qty*o.net;
+        // Profundidad estimada: sin order book real, asumimos que cerca del precio actual conseguís ~1/3
+        // del volumen diario. Tope duro para no exagerar nunca.
+        var depth=(o.vol!=null)?Math.max(1,Math.round(o.vol/3)):afford;
+        var qty=Math.max(1,Math.min(afford,depth,600));
+        return {o:o, qty:qty, inv:qty*o.cap, gain:qty*o.net};
+      });
+      // MAYOR GANANCIA total primero (sin importar el riesgo). Se reordena solo al cambiar el capital.
+      list.sort(function(a,b){ return b.gain-a.gain; });
+      list=list.slice(0,14);
+      var cards=list.map(function(x,i){ var o=x.o, qty=x.qty, inv=x.inv, gain=x.gain;
         var wt=itemWeight(o.id), totW=wt?Math.round(qty*wt):null;
         return '<div class="prec'+(i===0?' top':'')+'">'+
           '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
-          '<div class="body"><div class="mtag">'+o.m+(i===0?L(' · Recomendado ahora',' · Recommended now'):'')+'</div>'+
+          '<div class="body"><div class="mtag">'+o.m+(i===0?L(' · Más ganancia ahora',' · Most profit now'):'')+'</div>'+
             '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?L('zona roja','red zone'):L('seguro','safe'))+'</span></div>'+
             '<div class="dt">'+esc(o.dt)+'</div>'+
-            '<div class="dt plan-do">🛒 '+L('Comprá ','Buy ')+'<b>'+fmt(qty)+'</b>'+L(' und · invertís ~',' units · invest ~')+'<b>'+fmt(inv)+'</b>'+L(' de plata',' silver')+(totW!=null?L(' · pesa ~',' · weighs ~')+fmt(totW)+' kg':'')+'</div>'+
+            '<div class="dt plan-do">🛒 '+L('Probá con ','Start with ')+'<b>'+fmt(qty)+'</b>'+L(' und · ~',' units · ~')+'<b>'+fmt(inv)+'</b>'+L(' de plata',' silver')+(totW!=null?' · ~'+fmt(totW)+' kg':'')+qh('depth')+'</div>'+
             (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+
             '<div class="dt" style="font-size:12px;margin-top:3px">'+(o.solid?'🟢 '+L('Datos frescos','Fresh data'):'🟡 '+L('Datos algo viejos — verificá','A bit old — double-check'))+' · '+L('compra ','buy ')+ageTxt(o.buyAge)+' · '+L('venta ','sell ')+ageTxt(o.sellAge)+qh('datos')+'</div></div>'+
           '<div class="num"><div class="p">+'+fmt(gain)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI'+qh('roi')+' · '+fmt(o.net)+L('/u','/u ')+'</div></div></div>';
       }).join('');
       out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
-        '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' '+L('Solo mostramos oportunidades <b>frescas</b> (ambos precios de ≤6 h), <b>validadas contra el histórico</b> (mediana + volumen de 7 días) y con <b>volumen suficiente</b>. 🟢 = datos de ≤1 h con buen volumen; 🟡 = un poco más viejos, verificá. La cantidad se ajusta a <b>tu capital</b> y al volumen del día. El número verde = <b>ganancia total estimada</b>. <span class="badge-r risk">zona roja</span> = pasa por Caerleon. Nota honesta: los precios los aporta la comunidad, así que son tan recientes como el último jugador que escaneó — el chequeo final es siempre entrar al mercado en el juego.','We only show <b>fresh</b> opportunities (both prices ≤6 h old), <b>validated against history</b> (7-day median + volume) and with <b>enough volume</b>. 🟢 = data ≤1 h old with good volume; 🟡 = a bit older, double-check. The quantity adapts to <b>your capital</b> and the daily volume. The green number = <b>estimated total profit</b>. <span class="badge-r risk">red zone</span> = goes through Caerleon. Honest note: prices are crowd-sourced, so they\'re only as recent as the last player who scanned — the final check is always opening the market in-game.')+'</p>';
+        '<p class="pnote" style="text-align:center;margin-top:14px">'+L('Ordenado por <b>ganancia total, mayor primero</b> (sin importar el riesgo). ⚠️ <b>Importante:</b> el precio es la <b>venta más baja</b> del mercado, y a ese precio suele haber <b>pocas unidades</b>: si comprás de más, el precio sube y tu ganancia cae. Por eso la cantidad es <b>conservadora</b> — comprá de a poco y mirá la profundidad en el juego. Todo <b>validado contra el histórico</b> (mediana + volumen 7d) y filtrado por frescura (≤6 h). 🟢 = datos ≤1 h; 🟡 = verificá. <span class="badge-r risk">zona roja</span> = pasa por Caerleon.','Sorted by <b>total profit, highest first</b> (regardless of risk). ⚠️ <b>Important:</b> the price is the market\'s <b>lowest sell</b>, and there are usually <b>few units</b> at that price: if you buy more, the price rises and your profit drops. That\'s why the quantity is <b>conservative</b> — buy in small batches and check the depth in-game. All <b>validated against history</b> (7d median + volume) and filtered by freshness (≤6 h). 🟢 = data ≤1 h; 🟡 = double-check. <span class="badge-r risk">red zone</span> = goes through Caerleon.')+'</p>';
     }
     function runPlan(){
       var cap=+$('plan-cap').value;
@@ -996,7 +1002,7 @@
           return true;
         });
         valid.sort(function(a,b){ function sc(o){ return o.roi*Math.min(1.5,o.vol/60)*(o.age<60?1:o.age<180?0.6:0.35); } return sc(b)-sc(a); });
-        var top=valid.slice(0,14);
+        var top=valid.slice(0,24); // guardamos más candidatos; renderPlanCards muestra los 14 de mayor ganancia según tu capital
         if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades <b>reales y frescas</b> ahora mismo. Descartamos precios fantasma, datos viejos (+6 h) y items de muy poco volumen. Volvé en un rato o probá otro servidor.','No <b>real, fresh</b> opportunities right now. We filter out phantom prices, stale data (+6 h) and very low-volume items. Come back later or try another server.')+'</div>'; return; }
         planData=top;
         renderPlanCards();
@@ -1308,7 +1314,8 @@
       volumen:{t:['Volumen','Volume'],b:['Cuántas unidades se <b>venden por día</b>. Ojo con la <b>liquidez</b>: un descuentazo en algo de volumen bajo puede tardar días en revenderse.','How many units <b>sell per day</b>. Watch the <b>liquidity</b>: a huge discount on something low-volume can take days to resell.']},
       vstier:{t:['vs su tier','vs its tier'],b:['Cuánto <b>más o menos</b> se paga ese recurso comparado con el <b>promedio de los 5 recursos de su mismo tier</b> (mineral, madera, fibra, piel, piedra). Positivo = está caro ahora respecto de sus pares → es el que <b>más conviene juntar</b>. Sube y baja con la oferta/demanda del momento.','How much <b>more or less</b> that resource is paid vs the <b>average of the 5 resources of its tier</b> (ore, wood, fiber, hide, stone). Positive = it\'s pricey right now vs its peers → the <b>best one to gather</b>. It moves with current supply/demand.']},
       listar:{t:['Vender listando','Selling by listing'],b:['Ponés una <b>orden de venta</b> al precio de mercado y esperás a que alguien compre. Ganás <b>más</b>, pero puede tardar. El número es lo <b>neto</b> (ya con impuesto y comisión de orden descontados).','You place a <b>sell order</b> at market price and wait for a buyer. You get <b>more</b>, but it can take time. The number is <b>net</b> (sales tax and order fee already deducted).']},
-      instante:{t:['Vender al instante','Selling instantly'],b:['Le vendés a la <b>orden de compra</b> más alta que ya existe: cobrás <b>al toque</b>, sin esperar, pero un poco menos. El número es lo <b>neto</b> (solo impuesto, sin comisión de orden).','You sell to the highest existing <b>buy order</b>: paid <b>instantly</b>, no waiting, but a bit less. The number is <b>net</b> (sales tax only, no order fee).']}
+      instante:{t:['Vender al instante','Selling instantly'],b:['Le vendés a la <b>orden de compra</b> más alta que ya existe: cobrás <b>al toque</b>, sin esperar, pero un poco menos. El número es lo <b>neto</b> (solo impuesto, sin comisión de orden).','You sell to the highest existing <b>buy order</b>: paid <b>instantly</b>, no waiting, but a bit less. The number is <b>net</b> (sales tax only, no order fee).']},
+      depth:{t:['¿Por qué esta cantidad?','Why this quantity?'],b:['El mercado nos da <b>solo el precio más bajo</b>, no cuántas unidades hay a ese precio — y a ese precio suele haber <b>pocas</b>. Si comprás de más, vas “subiendo” de precio y tu ganancia real baja. Por eso sugerimos una cantidad <b>conservadora</b> para arrancar: comprá de a poco, y si ves que hay profundidad (muchas unidades cerca de ese precio), repetí.','The market only gives us the <b>lowest price</b>, not how many units are at that price — and there are usually <b>few</b>. If you buy more, you climb the price ladder and your real profit drops. That\'s why we suggest a <b>conservative</b> quantity to start: buy in small batches, and if you see depth (lots of units near that price), repeat.']}
     };
     function qh(key){ return '<span class="qh" data-q="'+key+'" role="button" tabindex="0" aria-label="'+L('Ayuda','Help')+'">?</span>'; }
     function openHelp(key){
