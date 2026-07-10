@@ -44,10 +44,37 @@
     r.appendChild(slot());
     return r;
   }
+  // Interstitial móvil: cuadrado 300x250 centrado con overlay + X en la esquina,
+  // una vez cada ~10 min (guardado en localStorage). Nunca supera la pantalla.
+  function adInterstitial() {
+    var S = window.SITE || {}, a = S.adsterraInterstitial;
+    if (!a || !a.key) return;
+    if (window.matchMedia && !window.matchMedia('(max-width:900px)').matches) return; // solo móvil
+    var GAP = 10 * 60 * 1000; // 10 minutos
+    function show() {
+      if (document.getElementById('interst')) return;
+      var last = 0; try { last = +localStorage.getItem('interst_last') || 0; } catch (e) {}
+      if (Date.now() - last < GAP) return;
+      try { localStorage.setItem('interst_last', '' + Date.now()); } catch (e) {}
+      var o = document.createElement('div'); o.id = 'interst';
+      var card = document.createElement('div'); card.className = 'interst-card';
+      var x = document.createElement('button'); x.className = 'interst-x'; x.type = 'button';
+      x.setAttribute('aria-label', 'Cerrar'); x.textContent = '×';
+      x.onclick = function () { o.remove(); };
+      o.addEventListener('click', function (e) { if (e.target === o) o.remove(); }); // tocar afuera cierra
+      card.appendChild(adsterraFrame(a));
+      o.appendChild(x); o.appendChild(card);
+      document.body.appendChild(o);
+    }
+    setTimeout(show, 45000);      // primera aparición a los 45 s
+    setInterval(show, 60000);     // luego revisa cada minuto si ya pasaron los 10
+  }
   function init() {
-    if (document.querySelector('.ad-rail')) return;
-    document.body.appendChild(rail('left'));
-    document.body.appendChild(rail('right'));
+    if (!document.querySelector('.ad-rail')) {
+      document.body.appendChild(rail('left'));
+      document.body.appendChild(rail('right'));
+    }
+    adInterstitial();
   }
   if (document.readyState !== 'loading') init();
   else document.addEventListener('DOMContentLoaded', init);
