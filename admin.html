@@ -38,6 +38,18 @@
     #msg.err { color: #cc5b48; }
     .gate { text-align: center; padding: 60px 20px; }
     .gate p { color: var(--muted); margin: 14px 0 22px; }
+    .vtable.ads th { text-align: right; color: #9c9179; font-size: 12px; font-weight: 600; padding: 4px 10px 8px; white-space: nowrap; }
+    .vtable.ads th:first-child, .vtable.ads td:first-child { text-align: left; }
+    .vtable.ads td { text-align: right; color: #e7ddc7; }
+    .vtable.ads td:last-child { color: #7fb069; }
+    .vtable.ads tfoot td { border-top: 2px solid #4a3a22; border-bottom: none; padding-top: 11px; color: #d9a441; font-weight: 700; }
+    .q { display: inline-block; width: 15px; height: 15px; line-height: 15px; text-align: center; border-radius: 50%; background: #372c1b; color: #d9a441; font-size: 10px; cursor: help; font-weight: 700; margin-left: 2px; }
+    .donadd { display: flex; gap: 10px; flex-wrap: wrap; }
+    .donadd input { background: #1a1610; color: #e7ddc7; border: 1px solid #4a3a22; border-radius: 6px; padding: 9px 12px; font-family: inherit; }
+    .donadd input.n { min-width: 160px; } .donadd input.m { flex: 1; min-width: 200px; }
+    .donrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid #241c12; padding: 9px 4px; font-size: 14px; }
+    .donrow .del { background: transparent; border: 1px solid #4a3a22; color: #cc5b48; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; flex: 0 0 auto; }
+    .tw { overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -72,12 +84,34 @@
             <div class="metric"><div class="k">Ingresos Adsterra</div><div class="v" id="m-rev">—</div><div class="s" id="m-rev-s">ver panel de Adsterra ↓</div></div>
           </div>
 
-          <div class="section-t">Ingresos</div>
-          <div class="rev">
-            <a id="l-adsterra" href="https://publishers.adsterra.com/statistics" target="_blank" rel="noopener"><div class="rk">Adsterra · Anuncios</div><div class="rs">Ganancias, impresiones y CPM — se ven en el panel de Adsterra</div></a>
-            <a id="l-cafecito" href="https://cafecito.app/dashboard" target="_blank" rel="noopener"><div class="rk">Cafecito · Donaciones</div><div class="rs">Cafecitos recibidos</div></a>
+          <div class="section-t">Ingresos — Adsterra (últimos 30 días)</div>
+          <div class="tw">
+          <table class="vtable ads">
+            <thead><tr>
+              <th>Fecha</th>
+              <th>Impresiones <span class="q" title="Cuántas veces se le mostró un anuncio a los visitantes.">?</span></th>
+              <th>Clics <span class="q" title="Cuántas veces la gente hizo clic en un anuncio.">?</span></th>
+              <th>CTR <span class="q" title="Click-Through Rate: el porcentaje de gente que hizo clic sobre la que vio el aviso (clics ÷ impresiones × 100). Más alto = el aviso engancha más.">?</span></th>
+              <th>CPM <span class="q" title="Costo Por Mil: lo que pagan los anunciantes por cada 1.000 impresiones. Es, en dólares, tu ganancia por cada mil vistas de anuncios.">?</span></th>
+              <th>Ganancia <span class="q" title="Tu ingreso real en dólares (USD) generado en esa fecha.">?</span></th>
+            </tr></thead>
+            <tbody id="ads-body"><tr><td colspan="6" class="muted">Tocá “Actualizar” para cargar…</td></tr></tbody>
+            <tfoot><tr id="ads-total"></tr></tfoot>
+          </table>
           </div>
-          <p class="muted" style="margin-top:10px">La ganancia exacta de Adsterra se ve en su panel. Para mostrarla acá en vivo (con el botón Actualizar) hace falta cargar la <b>API token de Adsterra</b> — avisá y lo enchufo.</p>
+          <div class="rev" style="margin-top:14px">
+            <a href="https://beta.publishers.adsterra.com/stats" target="_blank" rel="noopener"><div class="rk">Abrir Adsterra ↗</div><div class="rs">Detalle completo: por país, formato, navegador, etc.</div></a>
+            <a href="https://cafecito.app/dashboard" target="_blank" rel="noopener"><div class="rk">Cafecito · Donaciones ↗</div><div class="rs">Cafecitos recibidos</div></a>
+          </div>
+
+          <div class="section-t">Muro de donaciones</div>
+          <p class="muted" style="margin-bottom:10px">Agregá a quien done: aparece al instante en la web (sección “Donar”).</p>
+          <div class="donadd">
+            <input id="donor-name" class="n" placeholder="Nombre" maxlength="60" />
+            <input id="donor-msg" class="m" placeholder="Mensaje (opcional)" maxlength="140" />
+            <button class="btn" id="donor-add">Agregar al muro</button>
+          </div>
+          <div id="donor-list" style="margin-top:12px"></div>
 
           <p class="muted" id="updated" style="margin-top:22px"></p>
         </div>
@@ -87,6 +121,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script>
     // Dueños permitidos. El chequeo REAL de lectura lo hacen las reglas de Firestore
     // (isOwner por email): un externo no puede leer estas métricas aunque abra la página.
@@ -100,6 +135,9 @@
       projectId: 'albionxp-eef13',
     });
     const auth = firebase.auth();
+    const db = firebase.firestore();
+    const WORKER = 'https://albion-pagos.albionxp.workers.dev';
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const $ = (id) => document.getElementById(id);
     const fmt = (n) => (Number(n) || 0).toLocaleString('es');
     let timer = null, currentUser = null;
@@ -151,9 +189,58 @@
           $('m-vtoday').textContent = fmt(Number((f[dk] && f[dk].integerValue) || 0));
         } else { $('m-vtotal').textContent = '0'; $('m-vtoday').textContent = '0'; }
       } catch (e) { /* sin datos aún */ }
+      await loadAdsterra(token);
+      loadDonors();
       $('msg').textContent = '';
       $('updated').textContent = 'Actualizado: ' + new Date().toLocaleString('es');
     }
+
+    // Ingresos de Adsterra vía el worker (el token vive seguro en el worker, no acá).
+    async function loadAdsterra(token) {
+      try {
+        const r = await fetch(WORKER + '/adsterra', { headers: { Authorization: 'Bearer ' + token } });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.error) {
+          $('ads-body').innerHTML = '<tr><td colspan="6" class="muted">' + esc(d.error || ('Adsterra respondió ' + r.status)) + '</td></tr>';
+          $('ads-total').innerHTML = ''; $('m-rev').textContent = '—'; return;
+        }
+        const items = (d.items || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+        let tImp = 0, tClk = 0, tRev = 0;
+        items.forEach(it => { tImp += Number(it.impression) || 0; tClk += Number(it.clicks) || 0; tRev += Number(it.revenue) || 0; });
+        $('ads-body').innerHTML = items.length ? items.map(it =>
+          '<tr><td>' + esc(it.date) + '</td><td>' + fmt(it.impression) + '</td><td>' + fmt(it.clicks) + '</td><td>' +
+          (Number(it.ctr) || 0) + '%</td><td>$' + (Number(it.cpm) || 0).toFixed(3) + '</td><td>$' + (Number(it.revenue) || 0).toFixed(3) + '</td></tr>'
+        ).join('') : '<tr><td colspan="6" class="muted">Sin datos en el rango.</td></tr>';
+        const tCtr = tImp ? (tClk / tImp * 100) : 0, tCpm = tImp ? (tRev / tImp * 1000) : 0;
+        $('ads-total').innerHTML = '<td>Total</td><td>' + fmt(tImp) + '</td><td>' + fmt(tClk) + '</td><td>' + tCtr.toFixed(2) + '%</td><td>$' + tCpm.toFixed(3) + '</td><td>$' + tRev.toFixed(3) + '</td>';
+        $('m-rev').textContent = '$' + tRev.toFixed(2);
+        $('m-rev-s').textContent = 'últimos 30 días (USD)';
+      } catch (e) {
+        $('ads-body').innerHTML = '<tr><td colspan="6" class="muted">No se pudo consultar Adsterra (¿desplegaste el worker con ADSTERRA_TOKEN?).</td></tr>';
+        $('m-rev').textContent = '—';
+      }
+    }
+
+    // Muro de donaciones (Firestore). Leer público, escribir solo dueños (reglas).
+    async function loadDonors() {
+      try {
+        const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
+        const rows = [];
+        snap.forEach(doc => { const x = doc.data(); rows.push('<div class="donrow"><div>☕ <b>' + esc(x.name || '') + '</b>' + (x.msg ? ' — <span class="muted">' + esc(x.msg) + '</span>' : '') + '</div><button class="del" data-id="' + doc.id + '" title="Quitar">✕</button></div>'); });
+        $('donor-list').innerHTML = rows.join('') || '<p class="muted">Todavía no hay donaciones cargadas.</p>';
+        Array.prototype.forEach.call(document.querySelectorAll('#donor-list .del'), el => {
+          el.onclick = () => { if (confirm('¿Quitar del muro?')) db.collection('donors').doc(el.dataset.id).delete().then(loadDonors).catch(e => alert('Error: ' + e.message)); };
+        });
+      } catch (e) { $('donor-list').innerHTML = '<p class="muted">No se pudo cargar el muro (¿publicaste las reglas de Firestore?).</p>'; }
+    }
+    $('donor-add').addEventListener('click', () => {
+      const name = $('donor-name').value.trim(), msg = $('donor-msg').value.trim();
+      if (!name) { $('donor-name').focus(); return; }
+      db.collection('donors').add({ name: name.slice(0, 60), msg: msg.slice(0, 140), createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .then(() => { $('donor-name').value = ''; $('donor-msg').value = ''; loadDonors(); })
+        .catch(e => alert('Error al guardar: ' + e.message));
+    });
+
     $('load').addEventListener('click', loadStats);
   </script>
 </body>
