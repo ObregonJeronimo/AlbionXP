@@ -679,9 +679,17 @@
         var seen={},lids=[]; listed.forEach(function(p){ if(!seen[p.item_id]){seen[p.item_id]=1;lids.push(p.item_id);} });
         if(!lids.length){ out.innerHTML=nd+'Sin listados frescos en '+esc(city)+' para T'+tier+' ahora mismo. Probá otra ciudad o tier.</div>'; return; }
         return fetchHistoryMulti(lids,city,24,null).then(function(hist){
-          var avgBy={}; (hist||[]).forEach(function(s){ var pts=(s.data||[]).slice(-7); if(!pts.length) return; var u=pts.reduce(function(a,p){return a+p.item_count;},0); if(u<10) return; avgBy[s.item_id+'|'+s.quality]={avg:pts.reduce(function(a,p){return a+p.avg_price*p.item_count;},0)/u, vol:u/7}; });
+          var avgBy={}; (hist||[]).forEach(function(s){
+            var pts=(s.data||[]).slice(-7).filter(function(p){ return p.item_count>0 && p.avg_price>0; });
+            if(pts.length<2) return;                                  // pocos días con datos = poco confiable
+            var u=pts.reduce(function(a,p){return a+p.item_count;},0);
+            if(u<20) return;                                          // volumen bajo = media no confiable
+            var vals=pts.map(function(p){return p.avg_price;}).sort(function(a,b){return a-b;});
+            var m=vals.length, med=m%2?vals[(m-1)/2]:(vals[m/2-1]+vals[m/2])/2;   // MEDIANA: resiste el dato fantasma
+            avgBy[s.item_id+'|'+s.quality]={avg:med, vol:u/7};
+          });
           var deals=[];
-          listed.forEach(function(p){ var h=avgBy[p.item_id+'|'+p.quality]; if(!h||!h.avg) return; var disc=1-p.sell_price_min/h.avg; if(disc<minDisc) return; var net=h.avg*(1-feeR)-p.sell_price_min; if(net<=0) return; deals.push({id:p.item_id,q:p.quality,price:p.sell_price_min,avg:h.avg,disc:disc,net:net,vol:h.vol,date:p.sell_price_min_date}); });
+          listed.forEach(function(p){ var h=avgBy[p.item_id+'|'+p.quality]; if(!h||!h.avg) return; var disc=1-p.sell_price_min/h.avg; if(disc<minDisc || disc>0.75) return; var net=h.avg*(1-feeR)-p.sell_price_min; if(net<=0) return; deals.push({id:p.item_id,q:p.quality,price:p.sell_price_min,avg:h.avg,disc:disc,net:net,vol:h.vol,date:p.sell_price_min_date}); });
           deals.sort(function(a,b){ return b.disc-a.disc; });
           var top=deals.slice(0,30);
           if(!top.length){ out.innerHTML=nd+'Sin gangas ≥'+Math.round(minDisc*100)+'% en '+esc(city)+' ahora. Los mejores momentos son tras eventos y en horas pico; probá bajar el descuento mínimo.</div>'; return; }
