@@ -8,6 +8,17 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="css/site.css" />
   <link rel="stylesheet" href="ads.css" />
+  <style>
+    html{background:#13110d}                       /* evita el flash blanco al hacer overscroll en móvil */
+    body{overscroll-behavior-y:none}
+    @media(max-width:820px){ nav .nav-links .btn{display:none} }  /* en móvil el botón sale del hero, no del menú */
+    .nav-donate{color:#d9a441 !important;font-weight:600}
+    .donor-wall{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:24px}
+    .donor{background:rgba(217,164,65,.07);border:1px solid #4a3a22;border-radius:12px;padding:11px 16px;max-width:300px;text-align:left}
+    .donor .dn{font-family:'Cinzel',serif;color:#d9a441;font-weight:700;font-size:14px}
+    .donor .dm{color:#9c9179;font-size:13px;margin-top:2px;font-style:italic}
+    .donor.empty{color:#9c9179;font-size:14px;background:transparent;border-style:dashed;text-align:center}
+  </style>
 </head>
 <body>
   <!-- Fondo temático que va cambiando de "mood" a medida que scrolleás (capas de
@@ -27,6 +38,7 @@
         <a href="guias/index.html">Guías</a>
         <a href="#sostiene">Por qué es gratis</a>
         <a href="#comunidad">Comunidad</a>
+        <a href="#donar" class="nav-donate">☕ Donar</a>
         <a class="btn" href="app/">Abrir gratis</a>
       </div>
     </div>
@@ -107,36 +119,6 @@
     </div>
   </section>
 
-  <!-- CAPTURAS -->
-  <section id="capturas" class="band" data-scene="silver">
-    <div class="wrap">
-      <div class="section-head reveal">
-        <span class="eyebrow">Un vistazo</span>
-        <h2>Así se ve</h2>
-        <p>Interfaz limpia y al grano, directo en el navegador: elegís tu estrategia y tenés los números
-          claros —impuestos incluidos— al instante.</p>
-      </div>
-      <div class="shots reveal">
-        <figure class="shot">
-          <img src="img/app-plan.jpg" width="1424" height="861" loading="lazy" alt="Plan de plata: las mejores jugadas del momento" />
-          <figcaption>Plan de plata — las mejores jugadas del momento según tu capital</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="img/app-dashboard.jpg" width="1424" height="861" loading="lazy" alt="Comparador de precios por ciudad" />
-          <figcaption>Precios — el precio de cualquier item en las 7 ciudades y el MN</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="img/app-oro.jpg" width="1424" height="861" loading="lazy" alt="Gráfico del oro con señal de compra y venta" />
-          <figcaption>Oro — gráfico con señal de compra y venta</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="img/app-refinado.jpg" width="1424" height="861" loading="lazy" alt="Calculadora de refinado con recomendación del día" />
-          <figcaption>Refinado — beneficio por tier y qué conviene hoy</figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
   <!-- CÓMO TE AYUDA -->
   <section class="band" data-scene="silver">
     <div class="wrap">
@@ -173,7 +155,8 @@
         <span class="eyebrow">Por qué es gratis</span>
         <h2>Cómo se sostiene el proyecto</h2>
         <p>Mientras otras herramientas parecidas cobran suscripción o esconden funciones tras un pago,
-          acá <b>todo es gratis y sin límites</b>. Nos mantenemos de forma transparente, con anuncios discretos.</p>
+          acá <b>todo es gratis y sin límites</b>. Nos bancamos con <b>anuncios discretos</b> — es lo único que nos
+          permite cubrir los costos y seguir mejorando la web. Ojalá lo entiendan 🙏.</p>
       </div>
       <div class="ledger reveal">
         <div class="item">
@@ -186,7 +169,7 @@
         </div>
         <div class="item">
           <div class="k"><span class="mk">✦</span> Donaciones</div>
-          <p>Si la app te hizo plata y querés apoyar el desarrollo, podés invitarnos un café. Totalmente voluntario.</p>
+          <p>Si la web te hizo plata y querés dar una mano, podés invitarnos un café. Totalmente voluntario — y a quien dona lo sumamos al <b>muro de donaciones</b>.</p>
         </div>
       </div>
       <div class="pledge reveal">
@@ -195,7 +178,7 @@
           <li>Nunca venderemos tus datos.</li>
           <li>Nunca bloquearemos funciones detrás de un pago.</li>
           <li>Nunca anuncios de venta de plata por dinero real (RMT): va contra los términos de Albion y contra vos.</li>
-          <li>Los anuncios jamás te impedirán usar el sistema.</li>
+          <li>Los anuncios jamás te impedirán usar la web.</li>
         </ul>
       </div>
     </div>
@@ -251,14 +234,20 @@
     </div>
   </section>
 
-  <!-- DONAR -->
-  <section id="donar" class="band cta-band" style="display:none" data-scene="treasury">
+  <!-- APOYO / DONACIONES -->
+  <section id="donar" class="band cta-band" data-scene="treasury">
+    <div class="glow"></div>
     <div class="wrap">
       <div class="reveal">
-        <span class="eyebrow" style="justify-content:center">Apoyo</span>
-        <h2>¿Te hizo plata? Invitanos un café</h2>
-        <p>Cada donación va directo a mejorar el sistema: más estrategias, más datos, más velocidad.</p>
-        <a class="btn big" id="donate-btn" href="#" target="_blank" rel="noopener">♥ Donar</a>
+        <span class="eyebrow" style="justify-content:center">Apoyá el proyecto</span>
+        <h2>Mantené la web viva ☕</h2>
+        <p>Albion Silver Hub es <b>100% gratis</b> y se banca con anuncios discretos, que es lo que nos permite
+          cubrir los costos y seguir mejorándola. Ojalá lo entiendan 🙏. Y si te hizo plata y querés dar una mano
+          extra, <b>cualquier donación es más que bienvenida</b>.</p>
+        <p style="margin-top:6px;opacity:.9">A quienes donen los sumamos al <b>muro de donaciones</b> de acá abajo,
+          con su nombre y un mensaje. ¡Gracias por bancar el proyecto! 🙌</p>
+        <a class="btn big" id="donate-btn" href="#" target="_blank" rel="noopener" style="margin-top:10px">☕ Invitanos un café</a>
+        <div id="donor-wall" class="donor-wall reveal"></div>
       </div>
     </div>
   </section>
@@ -281,9 +270,14 @@
       var S = window.SITE || {};
       var c = document.getElementById('contact-link');
       if (c && S.contactEmail) c.href = 'mailto:' + S.contactEmail;
-      if (S.donateUrl) {
-        document.getElementById('donar').style.display = '';
-        document.getElementById('donate-btn').href = S.donateUrl;
+      var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+      var db = document.getElementById('donate-btn'); if (db) db.href = S.donateUrl || 'https://cafecito.app/albionxp';
+      var wall = document.getElementById('donor-wall');
+      if (wall) {
+        var ds = S.donors || [];
+        wall.innerHTML = ds.length
+          ? ds.map(function (d) { return '<div class="donor"><div class="dn">☕ ' + esc(d.name || 'Anónimo') + '</div>' + (d.msg ? '<div class="dm">“' + esc(d.msg) + '”</div>' : '') + '</div>'; }).join('')
+          : '<div class="donor empty">Todavía no hay donaciones — ¡sé el primero en aparecer en el muro! ☕</div>';
       }
       // Scroll reveal
       var io = new IntersectionObserver(function (es) {
