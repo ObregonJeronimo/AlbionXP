@@ -11,6 +11,11 @@
     var ifr = document.createElement('iframe');
     ifr.width = w; ifr.height = h; ifr.title = 'ad';
     ifr.setAttribute('scrolling', 'no'); ifr.setAttribute('frameborder', '0');
+    // SANDBOX: el anuncio se muestra dentro del recuadro pero NO puede redirigir la
+    // pestaña, abrir popups/popunders ni salir del iframe. Adsterra a veces sirve
+    // creativos abusivos (redirección a pantalla completa, falso "instalá X") — esto
+    // los contiene. Sin allow-top-navigation ni allow-popups a propósito.
+    ifr.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     ifr.style.cssText = 'border:0;display:block;max-width:100%';
     var opt = JSON.stringify({ key: a.key, format: 'iframe', height: h, width: w, params: {} });
     var C = '<' + '/script>';
@@ -94,7 +99,11 @@
     };
   }
   function init() {
-    if (!document.querySelector('.ad-rail')) {
+    // Los rails laterales SOLO en pantallas anchas (desktop). En móvil ni se crean:
+    // antes se creaban y se ocultaban por CSS, pero el iframe igual cargaba el script
+    // de Adsterra y podía secuestrar la página. Ahora en móvil no existen.
+    var wide = !window.matchMedia || window.matchMedia('(min-width:1520px)').matches;
+    if (wide && !document.querySelector('.ad-rail')) {
       document.body.appendChild(rail('left'));
       document.body.appendChild(rail('right'));
     }
