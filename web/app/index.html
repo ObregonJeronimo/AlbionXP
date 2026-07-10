@@ -74,6 +74,8 @@
     .prec .mtag{font-family:'Cinzel',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
     .prec .ti{font-weight:700;color:var(--text);font-size:15px;margin:1px 0 3px}
     .prec .dt{color:var(--muted);font-size:13.5px}
+    .prec .plan-do{color:var(--text);font-size:13.5px;margin-top:4px}
+    .prec .plan-do b{color:var(--gold)}
     .prec .num{text-align:right;flex:0 0 auto}
     .prec .num .p{font-family:'Cinzel',serif;font-size:20px;font-weight:700;color:var(--green)}
     .prec .num .r{font-size:12px;color:var(--muted)}
@@ -826,6 +828,34 @@
 
     // ---------- PLAN: qué conviene hacer AHORA (data-driven, sin plantillas) ----------
     $('plan-go').addEventListener('click',runPlan);
+    // Al cambiar el capital, recalculamos las cards al instante (sin volver a pedir el mercado).
+    $('plan-cap').addEventListener('change',function(){ if(planData) renderPlanCards(); });
+    var planData=null;
+    // Dibuja las cards del Plan usando el capital actual: cuánto comprar, cuánto invertir y cuánto ganar.
+    function renderPlanCards(){
+      if(!planData||!planData.length) return;
+      var cap=+$('plan-cap').value, out=$('plan-results');
+      var lowCap=cap<500000;
+      var tip=lowCap?L('Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.','With little capital, start with <b>high ROI and low buy price</b>: invest little and reinvest your gains. The Black Market (red zone) is better once you have more.'):L('Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).','With your capital you can scale: repeat the best routes with volume (watch the item\'s real volume — don\'t overexpose yourself).');
+      var cards=planData.map(function(o,i){
+        // Cantidad = lo que te alcanza con tu capital, pero SIN pasarte de lo que se vende por día
+        // (para que puedas revenderlo de verdad). Tope de cordura por las dudas.
+        var afford=Math.floor(cap/Math.max(1,o.cap));
+        var volCap=(o.vol!=null)?Math.max(1,Math.round(o.vol)):Infinity;
+        var qty=Math.max(1,Math.min(afford,volCap,5000));
+        var inv=qty*o.cap, gain=qty*o.net;
+        return '<div class="prec'+(i===0?' top':'')+'">'+
+          '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
+          '<div class="body"><div class="mtag">'+o.m+(i===0?L(' · Recomendado ahora',' · Recommended now'):'')+'</div>'+
+            '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?L('zona roja','red zone'):L('seguro','safe'))+'</span></div>'+
+            '<div class="dt">'+esc(o.dt)+'</div>'+
+            '<div class="dt plan-do">🛒 '+L('Comprá ','Buy ')+'<b>'+fmt(qty)+'</b>'+L(' und · invertís ~',' units · invest ~')+'<b>'+fmt(inv)+'</b>'+L(' de plata',' silver')+'</div>'+
+            (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+'</div>'+
+          '<div class="num"><div class="p">+'+fmt(gain)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · '+fmt(o.net)+L('/u','/u ')+'</div></div></div>';
+      }).join('');
+      out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
+        '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' '+L('<b>Validado contra el histórico real</b> (precio medio y volumen de 7 días) para filtrar precios inventados. Igual verificá en el juego antes de invertir fuerte. La cantidad a comprar se ajusta a <b>tu capital</b> y a lo que se vende por día (para que puedas revenderlo). El número verde grande = <b>ganancia total estimada</b>. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).','<b>Validated against real history</b> (7-day median price and volume) to filter out phantom prices. Still, double-check in game before investing big. The quantity to buy adapts to <b>your capital</b> and to daily volume (so you can actually resell it). The big green number = <b>estimated total profit</b>. <span class="badge-r risk">red zone</span> = goes through Caerleon (you can die carrying the load).')+'</p>';
+    }
     function runPlan(){
       var cap=+$('plan-cap').value;
       var out=$('plan-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Escaneando el mercado y validando precios contra el histórico real… puede tardar unos segundos.','Scanning the market and validating prices against real history… may take a few seconds.')+'</div>';
@@ -867,20 +897,8 @@
           });
           var top=(valid.length?valid:cand.filter(function(o){ return o.sellPrice<=o.cap*8; })).slice(0,14);
           if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades <b>reales</b> ahora mismo (descartamos los precios fantasma). Volvé en un rato — el mercado cambia todo el tiempo.','No <b>real</b> opportunities right now (we filtered out phantom prices). Come back later — the market changes all the time.')+'</div>'; return; }
-          var lowCap=cap<500000;
-          var tip=lowCap?L('Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.','With little capital, start with <b>high ROI and low buy price</b>: invest little and reinvest your gains. The Black Market (red zone) is better once you have more.'):L('Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).','With your capital you can scale: repeat the best routes with volume (watch the item\'s real volume — don\'t overexpose yourself).');
-          var cards=top.map(function(o,i){
-            var per=Math.max(1,Math.min(200,Math.floor(cap/Math.max(1,o.cap))));
-            return '<div class="prec'+(i===0?' top':'')+'">'+
-              '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
-              '<div class="body"><div class="mtag">'+o.m+(i===0?L(' · Recomendado ahora',' · Recommended now'):'')+'</div>'+
-                '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?L('zona roja','red zone'):L('seguro','safe'))+'</span></div>'+
-                '<div class="dt">'+esc(o.dt)+'</div>'+
-                (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+'</div>'+
-              '<div class="num"><div class="p">+'+fmt(o.net)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · x'+fmt(per)+' ≈ '+fmt(o.net*per)+'</div></div></div>';
-          }).join('');
-          out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
-            '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' '+L('<b>Validado contra el histórico real</b> (precio medio y volumen de los últimos 7 días) para filtrar precios inventados. Igual verificá en el juego antes de invertir fuerte. "x N ≈" = ganancia aprox. con tu capital. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).','<b>Validated against real history</b> (median price and volume of the last 7 days) to filter out phantom prices. Still, double-check in game before investing big. "x N ≈" = approx. profit with your capital. <span class="badge-r risk">red zone</span> = goes through Caerleon (you can die carrying the load).')+'</p>';
+          planData=top;
+          renderPlanCards();
         });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
