@@ -135,7 +135,18 @@
     .foro-in:focus{border-color:var(--gold)}
     .foro-form{max-width:740px;margin:0 auto 14px;display:grid;gap:8px}
     .foro-form .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .foro-list{max-width:740px;margin:0 auto 60px;display:grid;gap:10px}
+    .foro-list{max-width:740px;margin:0 auto 8px;display:grid;gap:12px}
+    .fcard{background:var(--iron2);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+    .fcard h3{font-family:'Cinzel',serif;font-size:17px;color:var(--text);margin-bottom:3px}
+    .fcard .meta{color:var(--muted);font-size:12.5px}
+    .fc-foot{display:flex;align-items:center;gap:18px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+    .fc-foot .fvote{margin:0}
+    .fc-ctoggle{font-size:13px}
+    .fc-comments{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+    .fpager{max-width:740px;margin:8px auto 60px;display:flex;align-items:center;justify-content:center;gap:16px;color:var(--muted);font-size:13px}
+    .fpg{background:var(--iron3);border:1px solid var(--line2);color:var(--gold);border-radius:8px;width:40px;height:34px;cursor:pointer;font-size:18px;line-height:1}
+    .fpg:hover:not(:disabled){border-color:var(--gold)}
+    .fpg:disabled{opacity:.35;cursor:default}
     .fpost{background:var(--iron2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .12s,transform .12s}
     .fpost:hover{border-color:var(--gold);transform:translateY(-2px)}
     .fpost h3{font-family:'Cinzel',serif;font-size:16px;color:var(--text);margin-bottom:3px}
@@ -903,15 +914,60 @@
         foroMsg(fbErr(e));
       });
     }
+    // FEED del foro: muestra los temas con su contenido ahí mismo (sin entrar), 10 por
+    // página (más recientes primero) y el resto con flechitas.
+    var foroPage=0, foroPosts=[];
     function showForoList(){
       var host=$('foro-body'); if(!host) return; host.innerHTML='<div class="loading"><span class="spin"></span>Cargando temas…</div>';
-      var head='<div style="max-width:740px;margin:0 auto 12px;display:flex;justify-content:flex-end">'+(canPost()?'<button class="fbtn" id="f-new">+ Nuevo tema</button>':'')+'</div>';
-      fbDb.collection('posts').orderBy('createdAt','desc').limit(60).get().then(function(qs){
-        var items=[]; qs.forEach(function(d){ var p=d.data(); items.push('<div class="fpost" data-pid="'+d.id+'"><h3>'+esc(p.title||'(sin título)')+'</h3><div class="meta">por '+esc(p.authorName||'—')+' · '+relTime(tsDate(p.createdAt))+'</div></div>'); });
-        host.innerHTML=head+'<div class="foro-list">'+(items.length?items.join(''):'<div class="fmsg">Todavía no hay temas. ¡Escribí el primero!</div>')+'</div>';
-        if($('f-new')) $('f-new').onclick=showForoComposer;
-        [].forEach.call(host.querySelectorAll('.fpost'),function(el){ el.onclick=function(){ showForoPost(el.getAttribute('data-pid')); }; });
+      fbDb.collection('posts').orderBy('createdAt','desc').limit(100).get().then(function(qs){
+        foroPosts=[]; qs.forEach(function(d){ foroPosts.push({id:d.id,d:d.data()}); });
+        foroPage=0; renderForoFeed();
       }).catch(function(e){ host.innerHTML='<div class="err">No se pudieron cargar los temas: '+esc(fbErr(e))+'</div>'; });
+    }
+    function renderForoFeed(){
+      var host=$('foro-body'); if(!host) return;
+      var PER=10, total=foroPosts.length, pages=Math.max(1,Math.ceil(total/PER));
+      if(foroPage>pages-1) foroPage=pages-1; if(foroPage<0) foroPage=0;
+      var head='<div style="max-width:740px;margin:0 auto 12px;display:flex;justify-content:flex-end">'+(canPost()?'<button class="fbtn" id="f-new">+ Nuevo tema</button>':'')+'</div>';
+      if(!total){ host.innerHTML=head+'<div class="foro-list"><div class="fmsg">Todavía no hay temas. ¡Escribí el primero!</div></div>'; if($('f-new')) $('f-new').onclick=showForoComposer; return; }
+      var slice=foroPosts.slice(foroPage*PER,(foroPage+1)*PER);
+      var cards=slice.map(function(p){
+        var canDel=fbUser&&(p.d.authorUid===fbUser.uid||isOwner());
+        return '<div class="fcard" data-pid="'+p.id+'">'
+          +'<h3>'+esc(p.d.title||'(sin título)')+'</h3>'
+          +'<div class="meta">por '+esc(p.d.authorName||'—')+' · '+relTime(tsDate(p.d.createdAt))+(canDel?' · <span class="flink fc-del" style="color:var(--red)">borrar</span>':'')+'</div>'
+          +'<div class="fbody">'+esc(p.d.body||'')+'</div>'
+          +'<div class="fc-foot"><span class="fvote"><button class="v-up" title="Útil">▲</button><b class="v-score">·</b><button class="v-down" title="No útil">▼</button></span>'
+          +'<span class="flink fc-ctoggle">💬 Comentarios</span></div>'
+          +'<div class="fc-comments" hidden></div></div>';
+      }).join('');
+      var pager = pages>1 ? '<div class="fpager"><button class="fpg" id="fp-prev"'+(foroPage===0?' disabled':'')+'>‹</button><span>Página '+(foroPage+1)+' de '+pages+'</span><button class="fpg" id="fp-next"'+(foroPage>=pages-1?' disabled':'')+'>›</button></div>' : '';
+      host.innerHTML=head+'<div class="foro-list">'+cards+'</div>'+pager;
+      if($('f-new')) $('f-new').onclick=showForoComposer;
+      if($('fp-prev')) $('fp-prev').onclick=function(){ if(foroPage>0){ foroPage--; renderForoFeed(); document.getElementById('tab-foro').scrollIntoView(); } };
+      if($('fp-next')) $('fp-next').onclick=function(){ if(foroPage<pages-1){ foroPage++; renderForoFeed(); document.getElementById('tab-foro').scrollIntoView(); } };
+      [].forEach.call(host.querySelectorAll('.fcard'),function(card){ wireCard(card); });
+    }
+    function wireCard(card){
+      var pid=card.getAttribute('data-pid'), ref=fbDb.collection('posts').doc(pid);
+      var del=card.querySelector('.fc-del'); if(del) del.onclick=function(){ if(!confirm('¿Borrar este tema?'))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
+      var scoreEl=card.querySelector('.v-score'), up=card.querySelector('.v-up'), down=card.querySelector('.v-down'), myVote=0;
+      function paint(vs){ var s=0; myVote=0; vs.forEach(function(v){ var val=v.data().value||0; s+=val; if(fbUser&&v.id===fbUser.uid) myVote=val; }); scoreEl.textContent=s; up.classList.toggle('on',myVote===1); down.classList.toggle('on',myVote===-1); }
+      ref.collection('votes').get().then(paint).catch(function(){ scoreEl.textContent='0'; });
+      function vote(val){ if(!canPost()){ alert('Iniciá sesión con Google para votar.'); return; } var nv=(myVote===val)?0:val; var vref=ref.collection('votes').doc(fbUser.uid); (nv===0?vref.delete():vref.set({value:nv})).then(function(){ ref.collection('votes').get().then(paint); }).catch(function(e){ alert(fbErr(e)); }); }
+      up.onclick=function(){vote(1);}; down.onclick=function(){vote(-1);};
+      var toggle=card.querySelector('.fc-ctoggle'), box=card.querySelector('.fc-comments'), loaded=false;
+      toggle.onclick=function(){ if(box.hidden){ box.hidden=false; toggle.textContent='💬 Ocultar comentarios'; if(!loaded){ loaded=true; loadComments(ref,box); } } else { box.hidden=true; toggle.textContent='💬 Comentarios'; } };
+    }
+    function loadComments(ref,box){
+      box.innerHTML='<div class="fmsg">Cargando…</div>';
+      ref.collection('comments').orderBy('createdAt').limit(200).get().then(function(cs){
+        var list=[]; cs.forEach(function(c){ var d=c.data(); var canDel=fbUser&&(d.authorUid===fbUser.uid||isOwner()); list.push('<div class="fcomment"><div class="meta">'+esc(d.authorName||'—')+' · '+relTime(tsDate(d.createdAt))+(canDel?' · <span class="flink fdelc" data-cid="'+c.id+'" style="color:var(--red)">borrar</span>':'')+'</div><div class="fbody" style="margin:4px 0 0;font-size:14px">'+esc(d.body||'')+'</div></div>'); });
+        var composer = canPost() ? '<div class="foro-form" style="margin-top:10px"><textarea class="foro-in fc-ctext" rows="2" placeholder="Escribí un comentario…" maxlength="2000"></textarea><div><button class="fbtn fc-csend">Comentar</button></div></div>' : '<div class="fmsg">Iniciá sesión con Google para comentar.</div>';
+        box.innerHTML=(list.length?list.join(''):'<div class="fmsg">Sin comentarios todavía.</div>')+composer;
+        [].forEach.call(box.querySelectorAll('.fdelc'),function(el){ el.onclick=function(){ if(!confirm('¿Borrar comentario?'))return; ref.collection('comments').doc(el.getAttribute('data-cid')).delete().then(function(){ loadComments(ref,box); }).catch(function(e){alert(fbErr(e));}); }; });
+        var send=box.querySelector('.fc-csend'); if(send) send.onclick=function(){ var ta=box.querySelector('.fc-ctext'), b=(ta.value||'').trim(); if(b.length<1){ ta.focus(); return; } send.disabled=true; ref.collection('comments').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),body:b.slice(0,2000),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){ loadComments(ref,box); }).catch(function(e){ send.disabled=false; alert(fbErr(e)); }); };
+      }).catch(function(){ box.innerHTML='<div class="fmsg">No se pudieron cargar los comentarios.</div>'; });
     }
     function showForoComposer(){
       if(!canPost()) return; var host=$('foro-body');
@@ -923,31 +979,6 @@
       $('f-send').onclick=function(){ var t=($('f-title').value||'').trim(), b=($('f-text').value||'').trim(); if(t.length<1||b.length<1){ $('f-msg').textContent='Poné un título y un texto.'; return; } $('f-send').disabled=true; $('f-msg').textContent='Publicando…';
         fbDb.collection('posts').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),title:t.slice(0,140),body:b.slice(0,5000),createdAt:firebase.firestore.FieldValue.serverTimestamp()})
           .then(function(){ showForoList(); }).catch(function(e){ $('f-send').disabled=false; $('f-msg').textContent=fbErr(e); }); };
-    }
-    function showForoPost(pid){
-      var host=$('foro-body'); host.innerHTML='<div class="loading"><span class="spin"></span>Cargando…</div>';
-      var ref=fbDb.collection('posts').doc(pid);
-      Promise.all([ ref.get(), ref.collection('comments').orderBy('createdAt').limit(200).get(), ref.collection('votes').get() ]).then(function(r){
-        var doc=r[0]; if(!doc.exists){ showForoList(); return; } var p=doc.data();
-        var score=0, myVote=0; r[2].forEach(function(v){ var val=v.data().value||0; score+=val; if(fbUser&&v.id===fbUser.uid) myVote=val; });
-        var comments=[]; r[1].forEach(function(c){ comments.push({id:c.id,d:c.data()}); });
-        var canDelPost=fbUser&&(p.authorUid===fbUser.uid||isOwner());
-        var h='<div class="fdetail"><span class="flink" id="f-back">‹ Volver a los temas</span>';
-        h+='<h2 style="font-family:Cinzel,serif;font-size:22px;margin:10px 0 2px">'+esc(p.title||'')+'</h2>';
-        h+='<div class="meta" style="color:var(--muted);font-size:13px">por '+esc(p.authorName||'—')+' · '+relTime(tsDate(p.createdAt))+(canDelPost?' · <span class="flink" id="f-delpost" style="color:var(--red)">borrar</span>':'')+'</div>';
-        h+='<div class="fbody">'+esc(p.body||'')+'</div>';
-        h+='<div class="fvote"><button id="f-up" class="'+(myVote===1?'on':'')+'" title="Útil">▲</button><b>'+score+'</b><button id="f-down" class="'+(myVote===-1?'on':'')+'" title="No útil">▼</button>'+(canPost()?'':'<span class="fmsg" style="padding:0 8px">Iniciá sesión (email verificado) para votar y comentar</span>')+'</div>';
-        h+='<h3 style="font-family:Cinzel,serif;font-size:15px;margin:18px 0 4px;color:var(--muted)">Comentarios ('+comments.length+')</h3>';
-        h+=comments.map(function(c){ var canDel=fbUser&&(c.d.authorUid===fbUser.uid||isOwner()); return '<div class="fcomment"><div class="meta">'+esc(c.d.authorName||'—')+' · '+relTime(tsDate(c.d.createdAt))+(canDel?' · <span class="flink fdelc" data-cid="'+c.id+'" style="color:var(--red)">borrar</span>':'')+'</div><div class="fbody" style="margin:4px 0 0;font-size:14px">'+esc(c.d.body||'')+'</div></div>'; }).join('');
-        if(canPost()) h+='<div class="foro-form" style="margin-top:14px"><textarea class="foro-in" id="f-ctext" rows="3" placeholder="Escribí un comentario…" maxlength="2000"></textarea><div><button class="fbtn" id="f-csend">Comentar</button></div><div class="fmsg" id="f-cmsg"></div></div>';
-        h+='</div>'; host.innerHTML=h;
-        $('f-back').onclick=showForoList;
-        if($('f-delpost')) $('f-delpost').onclick=function(){ if(!confirm('¿Borrar este tema?'))return; ref.delete().then(showForoList).catch(function(e){alert(fbErr(e));}); };
-        var vote=function(val){ if(!canPost())return; var nv=(myVote===val)?0:val; var vref=ref.collection('votes').doc(fbUser.uid); (nv===0?vref.delete():vref.set({value:nv})).then(function(){ showForoPost(pid); }).catch(function(e){ alert(fbErr(e)); }); };
-        if($('f-up')) $('f-up').onclick=function(){vote(1);}; if($('f-down')) $('f-down').onclick=function(){vote(-1);};
-        [].forEach.call(host.querySelectorAll('.fdelc'),function(el){ el.onclick=function(){ if(!confirm('¿Borrar comentario?'))return; ref.collection('comments').doc(el.getAttribute('data-cid')).delete().then(function(){showForoPost(pid);}).catch(function(e){alert(fbErr(e));}); }; });
-        if($('f-csend')) $('f-csend').onclick=function(){ var b=($('f-ctext').value||'').trim(); if(b.length<1){$('f-cmsg').textContent='Escribí algo.';return;} $('f-csend').disabled=true; $('f-cmsg').textContent='Enviando…'; ref.collection('comments').add({authorUid:fbUser.uid,authorName:foroName().slice(0,40),body:b.slice(0,2000),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){ showForoPost(pid); }).catch(function(e){ $('f-csend').disabled=false; $('f-cmsg').textContent=fbErr(e); }); };
-      }).catch(function(e){ host.innerHTML='<div class="err">No se pudo cargar el tema: '+esc(fbErr(e))+'</div>'; });
     }
 
     // ---------- tabs (genérico) ----------
