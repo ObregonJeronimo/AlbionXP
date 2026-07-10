@@ -34,6 +34,8 @@
     header .sp{flex:1}
     header a.back{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
     header a.back:hover{color:var(--goldb)}
+    .hdon{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.06em;color:#1a1305;background:linear-gradient(180deg,var(--goldb),var(--gold));border-radius:8px;padding:6px 13px;text-decoration:none;white-space:nowrap}
+    .hdon:hover{filter:brightness(1.07)}
     /* intro */
     .intro{padding:34px 0 8px;text-align:center}
     .intro .eyebrow2{display:inline-block;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:9px;opacity:.85}
@@ -165,7 +167,10 @@
       .intro p{font-size:14px}
       .tabs{gap:6px;margin:14px 0 2px}
       .tab{padding:8px 13px;font-size:12.5px}
-      header .wrap{height:54px}
+      header .wrap{height:54px;gap:10px}
+      .brand{font-size:14px}
+      header a.back{display:none}   /* el logo ya vuelve al inicio; liberamos espacio para el chip Donar */
+      .hdon{font-size:11px;padding:5px 11px}
     }
   </style>
 </head>
@@ -174,6 +179,7 @@
     <div class="wrap">
       <a class="brand" href="../index.html"><span class="sigil">⚔️</span> Albion <b>Silver Hub</b></a>
       <span class="sp"></span>
+      <a class="hdon" href="https://cafecito.app/albionxp" target="_blank" rel="noopener">☕ Donar</a>
       <a class="back" href="../index.html">← Inicio</a>
     </div>
   </header>

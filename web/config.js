@@ -2,6 +2,8 @@
 window.SITE = {
   // Botón donar (Cafecito).
   donateUrl: 'https://cafecito.app/albionxp',
+  // Muro de donaciones: agregá acá a quienes donan { name, msg }. Ej: { name:'Jero', msg:'¡Grande!' }
+  donors: [],
   // Banners laterales (Adsterra "Banner"). key + tamaño de la unidad. Se muestran
   // en los dos costados (solo en pantallas anchas). Vacío = espacio reservado.
   adsterra: { key: '1d84b06ebcdbf4d27880331ce7a9f3ea', width: 160, height: 600 },
