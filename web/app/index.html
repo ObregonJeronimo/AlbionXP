@@ -246,6 +246,7 @@
       <button class="tab" data-tab="precios">Precios</button>
       <button class="tab" data-tab="refinado">Refinado</button>
       <button class="tab" data-tab="craft">Crafteo</button>
+      <button class="tab" data-tab="gather">Recolección</button>
       <button class="tab" data-tab="transporte">Transporte</button>
       <button class="tab" data-tab="mn">Mercado Negro</button>
       <button class="tab" data-tab="sniper">Sniper</button>
@@ -321,6 +322,15 @@
         <button class="btn2" id="craft-go">Escanear crafteo → Mercado Negro</button>
       </div>
       <div id="craft-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Te muestro qué equipo conviene craftear y venderle al Mercado Negro de Caerleon.</p></div>
+    </section>
+
+    <section id="tab-gather" hidden>
+      <p class="desc"><b>Qué conviene recolectar.</b> Te muestro qué recurso crudo está <b>mejor pagado ahora</b> comparado con el promedio de su tier (no solo "el tier más alto vale más"). Junta lo que rinde más y vendelo donde más pagan. Tip: refinalo en la ciudad con bono ★ (pestaña Refinado) para exprimirlo aún más.</p>
+      <div class="controls" style="margin-top:2px">
+        <button class="btn2" id="gather-go">Ver qué conviene recolectar</button>
+        <span style="color:var(--faint);font-size:13px">Compara mineral, madera, fibra, piel y piedra (T4–T8) entre las ciudades. Tarda unos segundos.</span>
+      </div>
+      <div id="gather-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Te ordeno los recursos crudos por lo que valen ahora mismo vs su tier, con volumen y la mejor ciudad para vender.</p></div>
     </section>
 
     <section id="tab-transporte" hidden>
@@ -662,6 +672,10 @@
     }
     var GEAR=['2H_CLAYMORE','MAIN_SWORD','2H_AXE','2H_BOW','MAIN_FIRESTAFF','2H_ARCANESTAFF','MAIN_HOLYSTAFF','2H_NATURESTAFF','MAIN_SPEAR','MAIN_DAGGER','MAIN_HAMMER','2H_CROSSBOWLARGE','MAIN_CURSEDSTAFF','MAIN_FROSTSTAFF','ARMOR_PLATE_SET1','ARMOR_PLATE_SET2','ARMOR_LEATHER_SET1','ARMOR_LEATHER_SET2','ARMOR_CLOTH_SET1','ARMOR_CLOTH_SET2','HEAD_PLATE_SET1','HEAD_LEATHER_SET1','HEAD_CLOTH_SET1','SHOES_PLATE_SET1','SHOES_LEATHER_SET1','SHOES_CLOTH_SET1','BAG','CAPE'];
     function gearUniverse(tiers,ench){ var ids=[]; GEAR.forEach(function(l){ tiers.forEach(function(t){ ench.forEach(function(e){ ids.push(e>0?'T'+t+'_'+l+'@'+e:'T'+t+'_'+l); }); }); }); return ids; }
+    // Peso REAL de cada item (kg/unidad), extraído del dump oficial de Albion. Sirve para
+    // avisar cuánto pesa una compra (restricción real de transporte).
+    var WEIGHT={"T2_ORE":0.23,"T2_WOOD":0.23,"T2_FIBER":0.23,"T2_HIDE":0.23,"T2_ROCK":0.23,"T2_METALBAR":0.23,"T2_PLANKS":0.23,"T2_CLOTH":0.23,"T2_LEATHER":0.23,"T2_STONEBLOCK":0.23,"T3_ORE":0.34,"T3_WOOD":0.34,"T3_FIBER":0.34,"T3_HIDE":0.34,"T3_ROCK":0.34,"T3_METALBAR":0.34,"T3_PLANKS":0.34,"T3_CLOTH":0.34,"T3_LEATHER":0.34,"T3_STONEBLOCK":0.34,"T4_ORE":0.51,"T4_ORE_LEVEL1":0.51,"T4_ORE_LEVEL2":0.51,"T4_ORE_LEVEL3":0.51,"T4_WOOD":0.51,"T4_WOOD_LEVEL1":0.51,"T4_WOOD_LEVEL2":0.51,"T4_WOOD_LEVEL3":0.51,"T4_FIBER":0.51,"T4_FIBER_LEVEL1":0.51,"T4_FIBER_LEVEL2":0.51,"T4_FIBER_LEVEL3":0.51,"T4_HIDE":0.51,"T4_HIDE_LEVEL1":0.51,"T4_HIDE_LEVEL2":0.51,"T4_HIDE_LEVEL3":0.51,"T4_ROCK":0.51,"T4_ROCK_LEVEL1":0.51,"T4_ROCK_LEVEL2":0.51,"T4_ROCK_LEVEL3":0.51,"T4_METALBAR":0.51,"T4_METALBAR_LEVEL1":0.51,"T4_METALBAR_LEVEL2":0.51,"T4_METALBAR_LEVEL3":0.51,"T4_PLANKS":0.51,"T4_PLANKS_LEVEL1":0.51,"T4_PLANKS_LEVEL2":0.51,"T4_PLANKS_LEVEL3":0.51,"T4_CLOTH":0.51,"T4_CLOTH_LEVEL1":0.51,"T4_CLOTH_LEVEL2":0.51,"T4_CLOTH_LEVEL3":0.51,"T4_LEATHER":0.51,"T4_LEATHER_LEVEL1":0.51,"T4_LEATHER_LEVEL2":0.51,"T4_LEATHER_LEVEL3":0.51,"T4_STONEBLOCK":0.51,"T5_ORE":0.76,"T5_ORE_LEVEL1":0.76,"T5_ORE_LEVEL2":0.76,"T5_ORE_LEVEL3":0.76,"T5_WOOD":0.76,"T5_WOOD_LEVEL1":0.76,"T5_WOOD_LEVEL2":0.76,"T5_WOOD_LEVEL3":0.76,"T5_FIBER":0.76,"T5_FIBER_LEVEL1":0.76,"T5_FIBER_LEVEL2":0.76,"T5_FIBER_LEVEL3":0.76,"T5_HIDE":0.76,"T5_HIDE_LEVEL1":0.76,"T5_HIDE_LEVEL2":0.76,"T5_HIDE_LEVEL3":0.76,"T5_ROCK":0.76,"T5_ROCK_LEVEL1":0.76,"T5_ROCK_LEVEL2":0.76,"T5_ROCK_LEVEL3":0.76,"T5_METALBAR":0.76,"T5_METALBAR_LEVEL1":0.76,"T5_METALBAR_LEVEL2":0.76,"T5_METALBAR_LEVEL3":0.76,"T5_PLANKS":0.76,"T5_PLANKS_LEVEL1":0.76,"T5_PLANKS_LEVEL2":0.76,"T5_PLANKS_LEVEL3":0.76,"T5_CLOTH":0.76,"T5_CLOTH_LEVEL1":0.76,"T5_CLOTH_LEVEL2":0.76,"T5_CLOTH_LEVEL3":0.76,"T5_LEATHER":0.76,"T5_LEATHER_LEVEL1":0.76,"T5_LEATHER_LEVEL2":0.76,"T5_LEATHER_LEVEL3":0.76,"T5_STONEBLOCK":0.76,"T6_ORE":1.14,"T6_ORE_LEVEL1":1.14,"T6_ORE_LEVEL2":1.14,"T6_ORE_LEVEL3":1.14,"T6_WOOD":1.14,"T6_WOOD_LEVEL1":1.14,"T6_WOOD_LEVEL2":1.14,"T6_WOOD_LEVEL3":1.14,"T6_FIBER":1.14,"T6_FIBER_LEVEL1":1.14,"T6_FIBER_LEVEL2":1.14,"T6_FIBER_LEVEL3":1.14,"T6_HIDE":1.14,"T6_HIDE_LEVEL1":1.14,"T6_HIDE_LEVEL2":1.14,"T6_HIDE_LEVEL3":1.14,"T6_ROCK":1.14,"T6_ROCK_LEVEL1":1.14,"T6_ROCK_LEVEL2":1.14,"T6_ROCK_LEVEL3":1.14,"T6_METALBAR":1.14,"T6_METALBAR_LEVEL1":1.14,"T6_METALBAR_LEVEL2":1.14,"T6_METALBAR_LEVEL3":1.14,"T6_PLANKS":1.14,"T6_PLANKS_LEVEL1":1.14,"T6_PLANKS_LEVEL2":1.14,"T6_PLANKS_LEVEL3":1.14,"T6_CLOTH":1.14,"T6_CLOTH_LEVEL1":1.14,"T6_CLOTH_LEVEL2":1.14,"T6_CLOTH_LEVEL3":1.14,"T6_LEATHER":1.14,"T6_LEATHER_LEVEL1":1.14,"T6_LEATHER_LEVEL2":1.14,"T6_LEATHER_LEVEL3":1.14,"T6_STONEBLOCK":1.14,"T7_ORE":1.71,"T7_ORE_LEVEL1":1.71,"T7_ORE_LEVEL2":1.71,"T7_ORE_LEVEL3":1.71,"T7_WOOD":1.71,"T7_WOOD_LEVEL1":1.71,"T7_WOOD_LEVEL2":1.71,"T7_WOOD_LEVEL3":1.71,"T7_FIBER":1.71,"T7_FIBER_LEVEL1":1.71,"T7_FIBER_LEVEL2":1.71,"T7_FIBER_LEVEL3":1.71,"T7_HIDE":1.71,"T7_HIDE_LEVEL1":1.71,"T7_HIDE_LEVEL2":1.71,"T7_HIDE_LEVEL3":1.71,"T7_ROCK":1.71,"T7_ROCK_LEVEL1":1.71,"T7_ROCK_LEVEL2":1.71,"T7_ROCK_LEVEL3":1.71,"T7_METALBAR":1.71,"T7_METALBAR_LEVEL1":1.71,"T7_METALBAR_LEVEL2":1.71,"T7_METALBAR_LEVEL3":1.71,"T7_PLANKS":1.71,"T7_PLANKS_LEVEL1":1.71,"T7_PLANKS_LEVEL2":1.71,"T7_PLANKS_LEVEL3":1.71,"T7_CLOTH":1.71,"T7_CLOTH_LEVEL1":1.71,"T7_CLOTH_LEVEL2":1.71,"T7_CLOTH_LEVEL3":1.71,"T7_LEATHER":1.71,"T7_LEATHER_LEVEL1":1.71,"T7_LEATHER_LEVEL2":1.71,"T7_LEATHER_LEVEL3":1.71,"T7_STONEBLOCK":1.71,"T8_ORE":2.56,"T8_ORE_LEVEL1":2.56,"T8_ORE_LEVEL2":2.56,"T8_ORE_LEVEL3":2.56,"T8_WOOD":2.56,"T8_WOOD_LEVEL1":2.56,"T8_WOOD_LEVEL2":2.56,"T8_WOOD_LEVEL3":2.56,"T8_FIBER":2.56,"T8_FIBER_LEVEL1":2.56,"T8_FIBER_LEVEL2":2.56,"T8_FIBER_LEVEL3":2.56,"T8_HIDE":2.56,"T8_HIDE_LEVEL1":2.56,"T8_HIDE_LEVEL2":2.56,"T8_HIDE_LEVEL3":2.56,"T8_ROCK":2.56,"T8_ROCK_LEVEL1":2.56,"T8_ROCK_LEVEL2":2.56,"T8_ROCK_LEVEL3":2.56,"T8_METALBAR":2.56,"T8_METALBAR_LEVEL1":2.56,"T8_METALBAR_LEVEL2":2.56,"T8_METALBAR_LEVEL3":2.56,"T8_PLANKS":2.56,"T8_PLANKS_LEVEL1":2.56,"T8_PLANKS_LEVEL2":2.56,"T8_PLANKS_LEVEL3":2.56,"T8_CLOTH":2.56,"T8_CLOTH_LEVEL1":2.56,"T8_CLOTH_LEVEL2":2.56,"T8_CLOTH_LEVEL3":2.56,"T8_LEATHER":2.56,"T8_LEATHER_LEVEL1":2.56,"T8_LEATHER_LEVEL2":2.56,"T8_LEATHER_LEVEL3":2.56,"T8_STONEBLOCK":2.56,"T6_MEAL_STEW":3.4,"T8_MEAL_STEW":8.17,"T4_POTION_HEAL":0.3,"T6_POTION_HEAL":0.87,"T4_POTION_ENERGY":0.3,"T6_POTION_ENERGY":0.87,"T4_2H_CLAYMORE":6.8,"T4_MAIN_SWORD":5.1,"T4_2H_AXE":6.8,"T4_2H_BOW":6.8,"T4_MAIN_FIRESTAFF":5.1,"T4_2H_ARCANESTAFF":6.8,"T4_MAIN_HOLYSTAFF":5.1,"T4_2H_NATURESTAFF":6.8,"T4_MAIN_SPEAR":5.1,"T4_MAIN_DAGGER":5.1,"T4_MAIN_HAMMER":5.1,"T4_2H_CROSSBOWLARGE":6.8,"T4_MAIN_CURSEDSTAFF":5.1,"T4_MAIN_FROSTSTAFF":5.1,"T4_ARMOR_PLATE_SET1":3.4,"T4_ARMOR_PLATE_SET2":3.4,"T4_ARMOR_LEATHER_SET1":3.4,"T4_ARMOR_LEATHER_SET2":3.4,"T4_ARMOR_CLOTH_SET1":3.4,"T4_ARMOR_CLOTH_SET2":3.4,"T4_HEAD_PLATE_SET1":1.7,"T4_HEAD_LEATHER_SET1":1.7,"T4_HEAD_CLOTH_SET1":1.7,"T4_SHOES_PLATE_SET1":1.7,"T4_SHOES_LEATHER_SET1":1.7,"T4_SHOES_CLOTH_SET1":1.7,"T4_BAG":3.4,"T4_CAPE":1.7,"T5_2H_CLAYMORE":10.1,"T5_MAIN_SWORD":7.6,"T5_2H_AXE":10.1,"T5_2H_BOW":10.1,"T5_MAIN_FIRESTAFF":7.6,"T5_2H_ARCANESTAFF":10.1,"T5_MAIN_HOLYSTAFF":7.6,"T5_2H_NATURESTAFF":10.1,"T5_MAIN_SPEAR":7.6,"T5_MAIN_DAGGER":7.6,"T5_MAIN_HAMMER":7.6,"T5_2H_CROSSBOWLARGE":10.1,"T5_MAIN_CURSEDSTAFF":7.6,"T5_MAIN_FROSTSTAFF":7.6,"T5_ARMOR_PLATE_SET1":5.1,"T5_ARMOR_PLATE_SET2":5.1,"T5_ARMOR_LEATHER_SET1":5.1,"T5_ARMOR_LEATHER_SET2":5.1,"T5_ARMOR_CLOTH_SET1":5.1,"T5_ARMOR_CLOTH_SET2":5.1,"T5_HEAD_PLATE_SET1":2.5,"T5_HEAD_LEATHER_SET1":2.5,"T5_HEAD_CLOTH_SET1":2.5,"T5_SHOES_PLATE_SET1":2.5,"T5_SHOES_LEATHER_SET1":2.5,"T5_SHOES_CLOTH_SET1":2.5,"T5_BAG":5.1,"T5_CAPE":2.5,"T6_2H_CLAYMORE":15.2,"T6_MAIN_SWORD":11.4,"T6_2H_AXE":15.2,"T6_2H_BOW":15.2,"T6_MAIN_FIRESTAFF":11.4,"T6_2H_ARCANESTAFF":15.2,"T6_MAIN_HOLYSTAFF":11.4,"T6_2H_NATURESTAFF":15.2,"T6_MAIN_SPEAR":11.4,"T6_MAIN_DAGGER":11.4,"T6_MAIN_HAMMER":11.4,"T6_2H_CROSSBOWLARGE":15.2,"T6_MAIN_CURSEDSTAFF":11.4,"T6_MAIN_FROSTSTAFF":11.4,"T6_ARMOR_PLATE_SET1":7.6,"T6_ARMOR_PLATE_SET2":7.6,"T6_ARMOR_LEATHER_SET1":7.6,"T6_ARMOR_LEATHER_SET2":7.6,"T6_ARMOR_CLOTH_SET1":7.6,"T6_ARMOR_CLOTH_SET2":7.6,"T6_HEAD_PLATE_SET1":3.8,"T6_HEAD_LEATHER_SET1":3.8,"T6_HEAD_CLOTH_SET1":3.8,"T6_SHOES_PLATE_SET1":3.8,"T6_SHOES_LEATHER_SET1":3.8,"T6_SHOES_CLOTH_SET1":3.8,"T6_BAG":7.6,"T6_CAPE":3.8,"T7_2H_CLAYMORE":22.8,"T7_MAIN_SWORD":17.1,"T7_2H_AXE":22.8,"T7_2H_BOW":22.8,"T7_MAIN_FIRESTAFF":17.1,"T7_2H_ARCANESTAFF":22.8,"T7_MAIN_HOLYSTAFF":17.1,"T7_2H_NATURESTAFF":22.8,"T7_MAIN_SPEAR":17.1,"T7_MAIN_DAGGER":17.1,"T7_MAIN_HAMMER":17.1,"T7_2H_CROSSBOWLARGE":22.8,"T7_MAIN_CURSEDSTAFF":17.1,"T7_MAIN_FROSTSTAFF":17.1,"T7_ARMOR_PLATE_SET1":11.4,"T7_ARMOR_PLATE_SET2":11.4,"T7_ARMOR_LEATHER_SET1":11.4,"T7_ARMOR_LEATHER_SET2":11.4,"T7_ARMOR_CLOTH_SET1":11.4,"T7_ARMOR_CLOTH_SET2":11.4,"T7_HEAD_PLATE_SET1":5.7,"T7_HEAD_LEATHER_SET1":5.7,"T7_HEAD_CLOTH_SET1":5.7,"T7_SHOES_PLATE_SET1":5.7,"T7_SHOES_LEATHER_SET1":5.7,"T7_SHOES_CLOTH_SET1":5.7,"T7_BAG":11.4,"T7_CAPE":5.7,"T8_2H_CLAYMORE":34.2,"T8_MAIN_SWORD":25.6,"T8_2H_AXE":34.2,"T8_2H_BOW":34.2,"T8_MAIN_FIRESTAFF":25.6,"T8_2H_ARCANESTAFF":34.2,"T8_MAIN_HOLYSTAFF":25.6,"T8_2H_NATURESTAFF":34.2,"T8_MAIN_SPEAR":25.6,"T8_MAIN_DAGGER":25.6,"T8_MAIN_HAMMER":25.6,"T8_2H_CROSSBOWLARGE":34.2,"T8_MAIN_CURSEDSTAFF":25.6,"T8_MAIN_FROSTSTAFF":25.6,"T8_ARMOR_PLATE_SET1":17.1,"T8_ARMOR_PLATE_SET2":17.1,"T8_ARMOR_LEATHER_SET1":17.1,"T8_ARMOR_LEATHER_SET2":17.1,"T8_ARMOR_CLOTH_SET1":17.1,"T8_ARMOR_CLOTH_SET2":17.1,"T8_HEAD_PLATE_SET1":8.5,"T8_HEAD_LEATHER_SET1":8.5,"T8_HEAD_CLOTH_SET1":8.5,"T8_SHOES_PLATE_SET1":8.5,"T8_SHOES_LEATHER_SET1":8.5,"T8_SHOES_CLOTH_SET1":8.5,"T8_BAG":17.1,"T8_CAPE":8.5};
+    function itemWeight(id){ var b=(''+id).split('@')[0]; return WEIGHT[b]!=null?WEIGHT[b]:null; }
     function fresh2(p){ return p && p.sell_price_min && (''+p.sell_price_min_date).indexOf(NO_DATE)!==0; }
     // Mediana del precio y volumen/día de una serie histórica (1 ciudad, 1 calidad).
     // La MEDIANA resiste los precios fantasma que un promedio ponderado dispararía.
@@ -886,12 +900,13 @@
         var volCap=(o.vol!=null)?Math.max(1,Math.round(o.vol)):Infinity;
         var qty=Math.max(1,Math.min(afford,volCap,5000));
         var inv=qty*o.cap, gain=qty*o.net;
+        var wt=itemWeight(o.id), totW=wt?Math.round(qty*wt):null;
         return '<div class="prec'+(i===0?' top':'')+'">'+
           '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
           '<div class="body"><div class="mtag">'+o.m+(i===0?L(' · Recomendado ahora',' · Recommended now'):'')+'</div>'+
             '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?L('zona roja','red zone'):L('seguro','safe'))+'</span></div>'+
             '<div class="dt">'+esc(o.dt)+'</div>'+
-            '<div class="dt plan-do">🛒 '+L('Comprá ','Buy ')+'<b>'+fmt(qty)+'</b>'+L(' und · invertís ~',' units · invest ~')+'<b>'+fmt(inv)+'</b>'+L(' de plata',' silver')+'</div>'+
+            '<div class="dt plan-do">🛒 '+L('Comprá ','Buy ')+'<b>'+fmt(qty)+'</b>'+L(' und · invertís ~',' units · invest ~')+'<b>'+fmt(inv)+'</b>'+L(' de plata',' silver')+(totW!=null?L(' · pesa ~',' · weighs ~')+fmt(totW)+' kg':'')+'</div>'+
             (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+
             '<div class="dt" style="font-size:12px;margin-top:3px">'+(o.solid?'🟢 '+L('Datos frescos','Fresh data'):'🟡 '+L('Datos algo viejos — verificá','A bit old — double-check'))+' · '+L('compra ','buy ')+ageTxt(o.buyAge)+' · '+L('venta ','sell ')+ageTxt(o.sellAge)+qh('datos')+'</div></div>'+
           '<div class="num"><div class="p">+'+fmt(gain)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI'+qh('roi')+' · '+fmt(o.net)+L('/u','/u ')+'</div></div></div>';
@@ -977,6 +992,33 @@
         if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay rutas rentables de ','No profitable routes from ')+esc(from)+L(' a ',' to ')+esc(to)+L(' ahora mismo. Probá otro destino.',' right now. Try another destination.')+'</div>'; return; }
         finalizePlanOps(ops, out);
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+
+    // ---------- RECOLECCIÓN ----------
+    $('gather-go').addEventListener('click',runGather);
+    function runGather(){
+      var out=$('gather-results'); out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Comparando recursos entre ciudades…','Comparing resources across cities…')+'</div>';
+      var RAW=['ORE','WOOD','FIBER','HIDE','ROCK'], ids=[];
+      for(var t=4;t<=8;t++) RAW.forEach(function(r){ ids.push('T'+t+'_'+r); });
+      var SC=['Bridgewatch','Fort Sterling','Lymhurst','Martlock','Thetford','Caerleon'];
+      // Solo histórico (mediana + volumen 7d): la mediana es el valor REAL y no la ensucian los precios fantasma.
+      Promise.all(SC.map(function(c){ return fetchHistoryMulti(ids,c,24,1).then(function(s){ return {city:c,series:s}; }).catch(function(){ return {city:c,series:null}; }); })).then(function(parts){
+        var bestMed={}, vol={};
+        parts.forEach(function(pt){ var m=medVol(pt.series); Object.keys(m).forEach(function(id){ var mv=m[id]; vol[id]=(vol[id]||0)+mv.vol; var c=bestMed[id]; if(!c||mv.med>c.med) bestMed[id]={med:mv.med,city:pt.city}; }); });
+        var tierSum={}, tierN={};
+        ids.forEach(function(id){ var b=bestMed[id]; if(!b) return; var t=id.split('_')[0]; tierSum[t]=(tierSum[t]||0)+b.med; tierN[t]=(tierN[t]||0)+1; });
+        var rows=ids.map(function(id){ var b=bestMed[id]; if(!b) return null; var t=id.split('_')[0]; var avg=tierN[t]?tierSum[t]/tierN[t]:b.med; return {id:id,price:b.med,city:b.city,vol:vol[id]||0,prem:avg?b.med/avg-1:0}; }).filter(Boolean);
+        if(!rows.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('Sin histórico de recursos ahora mismo. Probá otro servidor.','No resource history right now. Try another server.')+'</div>'; return; }
+        rows.sort(function(a,b){ return b.prem-a.prem; });
+        var body=rows.map(function(r){ var pc=r.prem>=0.05?'pos':(r.prem<=-0.05?'neg':'');
+          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(webName(r.id))+'</span></td>'+
+            '<td>'+fmt(Math.round(r.price))+'</td>'+
+            '<td class="'+pc+'">'+(r.prem>=0?'+':'')+Math.round(r.prem*100)+'%</td>'+
+            '<td class="txt">'+esc(r.city)+'</td>'+
+            '<td>'+fmt(Math.round(r.vol))+L('/día','/day')+'</td></tr>';
+        }).join('');
+        out.innerHTML='<div class="panel"><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">'+L('Recurso','Resource')+'</th><th>'+L('Valor (media 7d)','Value (7d median)')+qh('media7d')+'</th><th>'+L('vs su tier','vs its tier')+qh('vstier')+'</th><th class="txt">'+L('Mejor ciudad','Best city')+'</th><th>'+L('Volumen','Volume')+qh('volumen')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('“vs su tier” = cuánto más (o menos) vale ese recurso comparado con el promedio de los 5 de su mismo tier. <b class="pos">Positivo = está caro ahora → conviene juntarlo</b>. Usamos la <b>mediana de 7 días</b> (valor real, sin precios fantasma). “Mejor ciudad” = dónde se paga más. Cruzalo con Refinado para exprimirlo.','“vs its tier” = how much more (or less) that resource is worth vs the average of the 5 of its tier. <b class="pos">Positive = it\'s pricey now → worth gathering</b>. We use the <b>7-day median</b> (real value, no phantom prices). “Best city” = where it pays most. Cross it with Refining to squeeze more.')+'</p></div>';
+      }).catch(function(e){ out.innerHTML='<div class="err">Error: '+esc(e.message||String(e))+'</div>'; });
     }
 
     // ---------- FORO / COMUNIDAD ----------
@@ -1155,7 +1197,7 @@
         lt.onclick=function(){ try{ localStorage.setItem('lang', LANG==='en'?'es':'en'); }catch(e){} location.reload(); }; }
       if(LANG!=='en') return;
       document.documentElement.setAttribute('lang','en');
-      var TABS_EN={plan:'Plan',precios:'Prices',refinado:'Refining',craft:'Crafting',transporte:'Transport',mn:'Black Market',sniper:'Sniper',mov:'Movement',oro:'Gold',foro:'Community'};
+      var TABS_EN={plan:'Plan',precios:'Prices',refinado:'Refining',craft:'Crafting',gather:'Gathering',transporte:'Transport',mn:'Black Market',sniper:'Sniper',mov:'Movement',oro:'Gold',foro:'Community'};
       [].forEach.call(document.querySelectorAll('.tab'),function(t){ var k=t.getAttribute('data-tab'); if(TABS_EN[k]) t.textContent=TABS_EN[k]; });
       var intro=document.querySelector('.intro');
       if(intro){ var eb=intro.querySelector('.eyebrow2'); if(eb) eb.textContent='Market · Albion Online';
@@ -1172,6 +1214,7 @@
         precios:'<b>Compare prices.</b> Search an item and see its price in every city and the Black Market. Tip: green = where to buy it cheapest · red = where to sell it dearest.',
         refinado:'<b>Refine to profit.</b> Buy raw materials, refine them in the bonus city ★ and sell the product. Tip: if you have <b>focus</b>, use it — the return nearly doubles.',
         craft:'<b>Craft to sell.</b> Using the game\'s real recipes, I work out which gear is worth crafting and selling to the Black Market. Tip: craft in the city specialized in that line (more return) and use focus if you can.',
+        gather:'<b>What to gather.</b> I show which raw resource is <b>best paid right now</b> vs the average of its tier (not just "higher tier = more"). Gather what pays best and sell it where it\'s dearest. Tip: refine it in the bonus city ★ (Refining tab) to squeeze even more.',
         transporte:'<b>Cross-city arbitrage.</b> Buy cheap in one city and sell dear in another. Tip: if the route goes through Caerleon (⚠ red zone) and you carry a lot, watch out for getting killed.',
         mn:'<b>Sell to the Black Market.</b> Caerleon\'s BM usually pays more for gear than the cities. Tip: it\'s a red zone — bring a fast mount and don\'t overload.',
         sniper:'<b>Hunt for deals.</b> Items listed well below their average price: buy them and instantly relist in the same city (no transport). Tip: check liquidity — a huge discount on something nobody buys is a trap.',
@@ -1182,6 +1225,8 @@
       Object.keys(DESC).forEach(function(k){ var d=document.querySelector('#tab-'+k+' .desc'); if(d) d.innerHTML=DESC[k]; });
       var BTN={'plan-go':'See what\'s worth it now','ref-go':'Calculate','craft-go':'Scan crafting → Black Market','flip-go':'Find transport routes','mn-go':'Scan Black Market','snp-go':'Find deals','vol-go':'Analyze','route-go':'Search this route'};
       Object.keys(BTN).forEach(function(id){ var b=document.getElementById(id); if(b) b.textContent=BTN[id]; });
+      var gg=$('gather-go'); if(gg) gg.textContent='See what\'s worth gathering';
+      var gh=document.querySelector('#tab-gather .controls span'); if(gh) gh.textContent='Compares ore, wood, fiber, hide and stone (T4–T8) across cities. Takes a few seconds.';
       if($('pm-auto')) $('pm-auto').textContent='🔀 Best opportunities';
       if($('pm-route')) $('pm-route').textContent='🗺️ Choose route';
       var rfl=document.querySelector('#route-from'); if(rfl){ var lf=rfl.parentNode.querySelector('label'); if(lf) lf.textContent='Origin (buy)'; }
@@ -1202,6 +1247,7 @@
         'plan-results':'Pick your capital and I\'ll tell you, with real-time data, the best plays to make silver.',
         'ref-results':'Pick a resource and the city where you refine (defaults to the bonus one ★). I calculate profit per tier, with and without focus, taxes included.',
         'craft-results':'I show you which gear is worth crafting and selling to Caerleon\'s Black Market.',
+        'gather-results':'I rank raw resources by what they\'re worth right now vs their tier, with volume and the best city to sell.',
         'flip-results':'Buy cheap in one city and sell dear in another. I find the best routes by profitability.',
         'mn-results':'Buy cheap gear in the cities and sell it to Caerleon\'s Black Market (red zone: be careful).',
         'snp-results':'I look for gear listed well below its historical average to resell it for profit.',
@@ -1228,7 +1274,8 @@
       media7d:{t:['Media 7d','7d median'],b:['El precio <b>promedio real</b> de los últimos 7 días (mediana), según el histórico de ventas del juego. Te dice a cuánto se revende <b>de verdad</b> (no un precio inventado).','The <b>real average</b> price of the last 7 days (median), from the game\'s sales history. Tells you what it <b>actually</b> resells for (not a made-up price).']},
       descuento:{t:['Descuento','Discount'],b:['Cuánto <b>más barato</b> está el listado respecto de su media de 7 días. Más descuento = mejor ganga (comprás bajo y revendés al precio normal).','How much <b>cheaper</b> the listing is versus its 7-day median. Bigger discount = better deal (buy low, resell at the normal price).']},
       ganrelist:{t:['Ganancia relist','Relist profit'],b:['Lo que ganás si comprás la ganga y la <b>volvés a listar</b> al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo), ya con impuesto y comisión descontados.','What you make if you buy the deal and <b>relist</b> it at market price in the <b>same city</b> (no transport, no risk), with tax and fee already deducted.']},
-      volumen:{t:['Volumen','Volume'],b:['Cuántas unidades se <b>venden por día</b>. Ojo con la <b>liquidez</b>: un descuentazo en algo de volumen bajo puede tardar días en revenderse.','How many units <b>sell per day</b>. Watch the <b>liquidity</b>: a huge discount on something low-volume can take days to resell.']}
+      volumen:{t:['Volumen','Volume'],b:['Cuántas unidades se <b>venden por día</b>. Ojo con la <b>liquidez</b>: un descuentazo en algo de volumen bajo puede tardar días en revenderse.','How many units <b>sell per day</b>. Watch the <b>liquidity</b>: a huge discount on something low-volume can take days to resell.']},
+      vstier:{t:['vs su tier','vs its tier'],b:['Cuánto <b>más o menos</b> se paga ese recurso comparado con el <b>promedio de los 5 recursos de su mismo tier</b> (mineral, madera, fibra, piel, piedra). Positivo = está caro ahora respecto de sus pares → es el que <b>más conviene juntar</b>. Sube y baja con la oferta/demanda del momento.','How much <b>more or less</b> that resource is paid vs the <b>average of the 5 resources of its tier</b> (ore, wood, fiber, hide, stone). Positive = it\'s pricey right now vs its peers → the <b>best one to gather</b>. It moves with current supply/demand.']}
     };
     function qh(key){ return '<span class="qh" data-q="'+key+'" role="button" tabindex="0" aria-label="'+L('Ayuda','Help')+'">?</span>'; }
     function openHelp(key){
@@ -1266,7 +1313,7 @@
       var b=ev.target.closest('.tab'); if(!b) return;
       document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on',t===b); });
       var tab=b.dataset.tab;
-      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-craft,#tab-transporte,#tab-mn,#tab-sniper,#tab-mov,#tab-oro,#tab-foro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
+      document.querySelectorAll('#tab-plan,#tab-precios,#tab-refinado,#tab-craft,#tab-gather,#tab-transporte,#tab-mn,#tab-sniper,#tab-mov,#tab-oro,#tab-foro').forEach(function(s){ s.hidden = s.id!=='tab-'+tab; });
       $('globalctl').style.display = (tab==='foro') ? 'none' : '';
       if(tab==='oro' && !goldLoaded){ goldLoaded=true; loadGold(); }
       if(tab==='foro') initForo();
