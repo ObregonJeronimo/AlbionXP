@@ -34,3 +34,16 @@
 #interst .interst-x{ position:fixed; top:12px; right:12px; width:40px; height:40px; border-radius:50%;
   background:#1a1610; border:1px solid #4a3a22; color:#f2c877; font-size:23px; line-height:36px; text-align:center;
   cursor:pointer; padding:0; box-shadow:0 4px 14px rgba(0,0,0,.6); }
+
+/* Modal de bienvenida (solo móvil, una vez). */
+#welcome{ position:fixed; inset:0; z-index:100002; display:flex; align-items:center; justify-content:center;
+  padding:18px; background:rgba(8,7,5,.92); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+#welcome .wel-card{ max-width:400px; background:#1a1610; border:1px solid #4a3a22; border-radius:16px;
+  padding:26px 24px; text-align:center; color:#e7ddc7; box-shadow:0 24px 70px rgba(0,0,0,.6);
+  font-family:'Alegreya Sans',system-ui,sans-serif; }
+#welcome .wel-ico{ font-size:38px; margin-bottom:4px; }
+#welcome h3{ font-family:'Cinzel',serif; color:#f2c877; font-size:20px; margin:0 0 12px; }
+#welcome p{ font-size:14.5px; line-height:1.6; color:#cabfa6; margin:0 0 12px; }
+#welcome b{ color:#f2c877; }
+#welcome .wel-btn{ margin-top:8px; font-family:'Cinzel',serif; font-weight:700; font-size:14px; padding:12px 28px;
+  border-radius:10px; border:0; cursor:pointer; background:linear-gradient(180deg,#f2c877,#d9a441); color:#1a1305; }
