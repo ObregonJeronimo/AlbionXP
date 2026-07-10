@@ -56,7 +56,7 @@ DONATE_MP_MIN = "5000"
 DONATE_USDT_MIN = "2"
 # Direccion de tu wallet USDT en red TRON (TRC-20) para recibir donaciones cripto.
 # DEJALA VACIA si no vas a usar cripto (el boton no aparece). Pega tu direccion T... para activarlo.
-DONATE_WALLET_TRC20 = ""
+DONATE_WALLET_TRC20 = "TUim653ftGyiTuLuoAmHwt63UG4vfTkZ4P"
 # Secretos que necesita este modulo (van con `npx wrangler secret put NOMBRE`):
 #   MP_ACCESS_TOKEN  — token de produccion de Mercado Pago (pago unico de donaciones)
 #   MP_WEBHOOK_SECRET— (opcional) valida la firma del webhook de MP
