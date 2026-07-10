@@ -69,6 +69,15 @@
     .prec .num{text-align:right;flex:0 0 auto}
     .prec .num .p{font-family:'Cinzel',serif;font-size:20px;font-weight:700;color:var(--green)}
     .prec .num .r{font-size:12px;color:var(--muted)}
+    @media(max-width:640px){
+      .prec{flex-wrap:wrap;gap:8px 12px;padding:14px}
+      .prec img{width:40px;height:40px}
+      .prec .body{flex:1 1 0;min-width:0}
+      .prec .ti{font-size:14.5px}
+      .prec .num{flex:1 1 100%;text-align:left;padding-left:52px}
+      .prec .num .p{font-size:21px}
+      .prec .num .r{font-size:11.5px}
+    }
     .badge-r{display:inline-block;font-size:11px;padding:1px 7px;border-radius:5px;margin-left:6px;vertical-align:1px}
     .badge-r.safe{background:rgba(127,176,105,.15);color:var(--green);border:1px solid rgba(127,176,105,.4)}
     .badge-r.risk{background:rgba(204,91,72,.15);color:var(--red);border:1px solid rgba(204,91,72,.4)}
@@ -718,39 +727,59 @@
     $('plan-go').addEventListener('click',runPlan);
     function runPlan(){
       var cap=+$('plan-cap').value;
-      var out=$('plan-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el mercado en vivo (transporte y mercado negro)… puede tardar unos segundos.</div>';
+      var out=$('plan-results'); out.innerHTML='<div class="loading"><span class="spin"></span>Escaneando el mercado y validando precios contra el histórico real… puede tardar unos segundos.</div>';
       var feeR=sellFees(STATE.premium), instFee=instFees(STATE.premium), gear=gearUniverse([4,5,6],[0,1]);
       Promise.all([ fetchPricesMulti(liquidUniverse(), CITIES, 1), fetchPricesMulti(gear, CITIES, 1), fetchPricesMulti(gear, ['Black Market'], 1) ]).then(function(a){
         if(!Array.isArray(a[0])){ out.innerHTML='<div class="err">El proxy de precios no respondió.</div>'; return; }
         var ops=[], byItem={};
         a[0].forEach(function(p){ if(!fresh2(p)) return; (byItem[p.item_id]=byItem[p.item_id]||[]).push({city:p.city,sell:p.sell_price_min,date:p.sell_price_min_date}); });
         Object.keys(byItem).forEach(function(id){ var rows=byItem[id], buy=null,sel=null;
-          rows.forEach(function(x){ if(!buy||x.sell<buy.sell) buy=x; });
-          rows.forEach(function(y){ if(y.city!==buy.city&&(!sel||y.sell>sel.sell)) sel=y; });
-          if(!buy||!sel) return; var net=(sel.sell-1)*(1-feeR)-buy.sell; if(net<=0) return; var roi=net/buy.sell; if(roi<0.1) return;
-          ops.push({m:'Transporte',id:id,net:net,roi:roi,cap:buy.sell,risk:(buy.city==='Caerleon'||sel.city==='Caerleon'),dt:'Comprá en '+buy.city+' ('+fmt(buy.sell)+') y vendé en '+sel.city+' ('+fmt(sel.sell)+')'});
+          rows.forEach(function(x){ if(x.sell>0&&(!buy||x.sell<buy.sell)) buy=x; });
+          rows.forEach(function(y){ if(buy&&y.city!==buy.city&&(!sel||y.sell>sel.sell)) sel=y; });
+          if(!buy||!sel) return;
+          if(sel.sell>buy.sell*30) return; // pre-filtro: nadie transporta a >30x, es precio inventado
+          var net=(sel.sell-1)*(1-feeR)-buy.sell; if(net<=0) return; var roi=net/buy.sell; if(roi<0.1) return;
+          ops.push({m:'Transporte',id:id,net:net,roi:roi,cap:buy.sell,risk:(buy.city==='Caerleon'||sel.city==='Caerleon'),sellCity:sel.city,sellPrice:sel.sell,dt:'Comprá en '+buy.city+' ('+fmt(buy.sell)+') y vendé en '+sel.city+' ('+fmt(sel.sell)+')'});
         });
         if(Array.isArray(a[1])&&Array.isArray(a[2])){
           var cheap={}; a[1].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city}; });
           a[2].forEach(function(p){ if(p.city!=='Black Market'||!p.buy_price_max||(''+p.buy_price_max_date).indexOf(NO_DATE)===0) return; var c=cheap[p.item_id]; if(!c) return; var net=p.buy_price_max*(1-instFee)-c.sell; if(net<=2000) return;
-            ops.push({m:'Mercado Negro',id:p.item_id,net:net,roi:net/c.sell,cap:c.sell,risk:true,dt:'Comprá en '+c.city+' ('+fmt(c.sell)+') y el MN de Caerleon paga '+fmt(p.buy_price_max)});
+            ops.push({m:'Mercado Negro',id:p.item_id,net:net,roi:net/c.sell,cap:c.sell,risk:true,sellCity:'Black Market',sellPrice:p.buy_price_max,dt:'Comprá en '+c.city+' ('+fmt(c.sell)+') y el MN de Caerleon paga '+fmt(p.buy_price_max)});
           });
         }
         if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">No hay oportunidades claras ahora mismo. Probá otro servidor o volvé en un rato — el mercado cambia todo el tiempo.</div>'; return; }
         ops.sort(function(x,y){ return y.roi-x.roi; });
-        var top=ops.slice(0,14), lowCap=cap<500000;
-        var tip=lowCap?'Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.':'Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).';
-        var cards=top.map(function(o,i){
-          var per=Math.max(1,Math.min(200,Math.floor(cap/Math.max(1,o.cap))));
-          return '<div class="prec'+(i===0?' top':'')+'">'+
-            '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
-            '<div class="body"><div class="mtag">'+o.m+(i===0?' · Recomendado ahora':'')+'</div>'+
-              '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?'zona roja':'seguro')+'</span></div>'+
-              '<div class="dt">'+esc(o.dt)+'</div></div>'+
-            '<div class="num"><div class="p">+'+fmt(o.net)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · x'+fmt(per)+' ≈ '+fmt(o.net*per)+'</div></div></div>';
-        }).join('');
-        out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
-          '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' Netos tras impuesto y con datos en vivo — verificá precio y volumen en el juego antes de invertir fuerte. "x N ≈" = ganancia aprox. con tu capital. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).</p>';
+        var cand=ops.slice(0,80);
+        // VALIDACIÓN ANTI-FANTASMA: pedimos el histórico (últimos 7 días) por ciudad de venta y
+        // descartamos precios muy por encima de la media real o items que casi no se venden.
+        var byCity={}; cand.forEach(function(o){ (byCity[o.sellCity]=byCity[o.sellCity]||[]).push(o.id); });
+        var jobs=Object.keys(byCity).map(function(city){ return fetchHistoryMulti(byCity[city],city,24,1).then(function(series){ return {city:city,series:series}; }).catch(function(){ return {city:city,series:null}; }); });
+        Promise.all(jobs).then(function(results){
+          var hist={}, haveHist=false;
+          results.forEach(function(r){ if(!Array.isArray(r.series)) return; r.series.forEach(function(s){ var pts=(s.data||[]).slice(-7); if(!pts.length) return; var v=pts.reduce(function(x,p){return x+(p.item_count||0);},0); if(!v) return; haveHist=true; hist[r.city+'|'+s.item_id]={avg:pts.reduce(function(x,p){return x+p.avg_price*p.item_count;},0)/v,vol:v}; }); });
+          var valid=cand.filter(function(o){
+            var h=hist[o.sellCity+'|'+o.id];
+            if(!h) return !haveHist && o.sellPrice<=o.cap*8;   // sin histórico del item = casi seguro fantasma/muerto
+            if(h.vol<12) return false;                          // casi no se vende → precio no confiable
+            if(o.sellPrice>h.avg*2.5) return false;             // muy por encima de la media real → inventado
+            return true;
+          });
+          var top=(valid.length?valid:cand.filter(function(o){ return o.sellPrice<=o.cap*8; })).slice(0,14);
+          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">No hay oportunidades <b>reales</b> ahora mismo (descartamos los precios fantasma). Volvé en un rato — el mercado cambia todo el tiempo.</div>'; return; }
+          var lowCap=cap<500000;
+          var tip=lowCap?'Con poco capital, arrancá por las de <b>ROI alto y precio de compra bajo</b>: invertís poco y reinvertís lo ganado. El Mercado Negro (zona roja) mejor cuando tengas más.':'Con tu capital podés escalar: repetí las mejores rutas con volumen (ojo el volumen real del item — no te sobreexpongas).';
+          var cards=top.map(function(o,i){
+            var per=Math.max(1,Math.min(200,Math.floor(cap/Math.max(1,o.cap))));
+            return '<div class="prec'+(i===0?' top':'')+'">'+
+              '<img loading="lazy" src="'+icon(o.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+
+              '<div class="body"><div class="mtag">'+o.m+(i===0?' · Recomendado ahora':'')+'</div>'+
+                '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?'zona roja':'seguro')+'</span></div>'+
+                '<div class="dt">'+esc(o.dt)+'</div></div>'+
+              '<div class="num"><div class="p">+'+fmt(o.net)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI · x'+fmt(per)+' ≈ '+fmt(o.net*per)+'</div></div></div>';
+          }).join('');
+          out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
+            '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' <b>Validado contra el histórico real</b> (precio medio y volumen de los últimos 7 días) para filtrar precios inventados. Igual verificá en el juego antes de invertir fuerte. "x N ≈" = ganancia aprox. con tu capital. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).</p>';
+        });
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
