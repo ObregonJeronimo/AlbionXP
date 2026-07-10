@@ -870,11 +870,12 @@
             '<div class="ti">'+esc(webName(o.id))+'<span class="badge-r '+(o.risk?'risk':'safe')+'">'+(o.risk?L('zona roja','red zone'):L('seguro','safe'))+'</span></div>'+
             '<div class="dt">'+esc(o.dt)+'</div>'+
             '<div class="dt plan-do">🛒 '+L('Comprá ','Buy ')+'<b>'+fmt(qty)+'</b>'+L(' und · invertís ~',' units · invest ~')+'<b>'+fmt(inv)+'</b>'+L(' de plata',' silver')+'</div>'+
-            (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+'</div>'+
+            (o.vol!=null?'<div class="dt" style="color:var(--faint);font-size:12.5px;margin-top:2px">'+L('Movimiento: se venden ≈','Movement: ~')+fmt(Math.round(o.vol))+L('/día en ','/day in ')+esc(o.sellCity)+'</div>':'')+
+            '<div class="dt" style="font-size:12px;margin-top:3px">'+(o.solid?'🟢 '+L('Datos frescos','Fresh data'):'🟡 '+L('Datos algo viejos — verificá','A bit old — double-check'))+' · '+L('compra ','buy ')+ageTxt(o.buyAge)+' · '+L('venta ','sell ')+ageTxt(o.sellAge)+qh('datos')+'</div></div>'+
           '<div class="num"><div class="p">+'+fmt(gain)+'</div><div class="r">'+Math.round(o.roi*100)+'% ROI'+qh('roi')+' · '+fmt(o.net)+L('/u','/u ')+'</div></div></div>';
       }).join('');
       out.innerHTML='<div class="plan-recs">'+cards+'</div>'+
-        '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' '+L('<b>Validado contra el histórico real</b> (precio medio y volumen de 7 días) para filtrar precios inventados. Igual verificá en el juego antes de invertir fuerte. La cantidad a comprar se ajusta a <b>tu capital</b> y a lo que se vende por día (para que puedas revenderlo). El número verde grande = <b>ganancia total estimada</b>. <span class="badge-r risk">zona roja</span> = pasa por Caerleon (podés morir con la carga).','<b>Validated against real history</b> (7-day median price and volume) to filter out phantom prices. Still, double-check in game before investing big. The quantity to buy adapts to <b>your capital</b> and to daily volume (so you can actually resell it). The big green number = <b>estimated total profit</b>. <span class="badge-r risk">red zone</span> = goes through Caerleon (you can die carrying the load).')+'</p>';
+        '<p class="pnote" style="text-align:center;margin-top:14px">'+tip+' '+L('Solo mostramos oportunidades <b>frescas</b> (ambos precios de ≤6 h), <b>validadas contra el histórico</b> (mediana + volumen de 7 días) y con <b>volumen suficiente</b>. 🟢 = datos de ≤1 h con buen volumen; 🟡 = un poco más viejos, verificá. La cantidad se ajusta a <b>tu capital</b> y al volumen del día. El número verde = <b>ganancia total estimada</b>. <span class="badge-r risk">zona roja</span> = pasa por Caerleon. Nota honesta: los precios los aporta la comunidad, así que son tan recientes como el último jugador que escaneó — el chequeo final es siempre entrar al mercado en el juego.','We only show <b>fresh</b> opportunities (both prices ≤6 h old), <b>validated against history</b> (7-day median + volume) and with <b>enough volume</b>. 🟢 = data ≤1 h old with good volume; 🟡 = a bit older, double-check. The quantity adapts to <b>your capital</b> and the daily volume. The green number = <b>estimated total profit</b>. <span class="badge-r risk">red zone</span> = goes through Caerleon. Honest note: prices are crowd-sourced, so they\'re only as recent as the last player who scanned — the final check is always opening the market in-game.')+'</p>';
     }
     function runPlan(){
       var cap=+$('plan-cap').value;
@@ -890,12 +891,12 @@
           if(!buy||!sel) return;
           if(sel.sell>buy.sell*30) return; // pre-filtro: nadie transporta a >30x, es precio inventado
           var net=(sel.sell-1)*(1-feeR)-buy.sell; if(net<=0) return; var roi=net/buy.sell; if(roi<0.1) return;
-          ops.push({m:L('Transporte','Transport'),id:id,net:net,roi:roi,cap:buy.sell,risk:(buy.city==='Caerleon'||sel.city==='Caerleon'),sellCity:sel.city,sellPrice:sel.sell,dt:L('Comprá en ','Buy in ')+buy.city+' ('+fmt(buy.sell)+')'+L(' y vendé en ',' and sell in ')+sel.city+' ('+fmt(sel.sell)+')'});
+          ops.push({m:L('Transporte','Transport'),id:id,net:net,roi:roi,cap:buy.sell,risk:(buy.city==='Caerleon'||sel.city==='Caerleon'),buyCity:buy.city,sellCity:sel.city,sellPrice:sel.sell,buyDate:buy.date,sellDate:sel.date,dt:L('Comprá en ','Buy in ')+buy.city+' ('+fmt(buy.sell)+')'+L(' y vendé en ',' and sell in ')+sel.city+' ('+fmt(sel.sell)+')'});
         });
         if(Array.isArray(a[1])&&Array.isArray(a[2])){
-          var cheap={}; a[1].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city}; });
+          var cheap={}; a[1].forEach(function(p){ if(p.city==='Black Market'||!fresh2(p)) return; if(!cheap[p.item_id]||p.sell_price_min<cheap[p.item_id].sell) cheap[p.item_id]={sell:p.sell_price_min,city:p.city,date:p.sell_price_min_date}; });
           a[2].forEach(function(p){ if(p.city!=='Black Market'||!p.buy_price_max||(''+p.buy_price_max_date).indexOf(NO_DATE)===0) return; var c=cheap[p.item_id]; if(!c) return; var net=p.buy_price_max*(1-instFee)-c.sell; if(net<=2000) return;
-            ops.push({m:L('Mercado Negro','Black Market'),id:p.item_id,net:net,roi:net/c.sell,cap:c.sell,risk:true,sellCity:'Black Market',sellPrice:p.buy_price_max,dt:L('Comprá en ','Buy in ')+c.city+' ('+fmt(c.sell)+')'+L(' y el MN de Caerleon paga ',' and Caerleon BM pays ')+fmt(p.buy_price_max)});
+            ops.push({m:L('Mercado Negro','Black Market'),id:p.item_id,net:net,roi:net/c.sell,cap:c.sell,risk:true,buyCity:c.city,sellCity:'Black Market',sellPrice:p.buy_price_max,buyDate:c.date,sellDate:p.buy_price_max_date,dt:L('Comprá en ','Buy in ')+c.city+' ('+fmt(c.sell)+')'+L(' y el MN de Caerleon paga ',' and Caerleon BM pays ')+fmt(p.buy_price_max)});
           });
         }
         if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades claras ahora mismo. Probá otro servidor o volvé en un rato — el mercado cambia todo el tiempo.','No clear opportunities right now. Try another server or come back later — the market changes all the time.')+'</div>'; return; }
@@ -903,20 +904,33 @@
         var cand=ops.slice(0,80);
         // VALIDACIÓN ANTI-FANTASMA: pedimos el histórico (últimos 7 días) por ciudad de venta y
         // descartamos precios muy por encima de la media real o items que casi no se venden.
-        var byCity={}; cand.forEach(function(o){ (byCity[o.sellCity]=byCity[o.sellCity]||[]).push(o.id); });
+        var byCity={}; cand.forEach(function(o){ (byCity[o.sellCity]=byCity[o.sellCity]||[]).push(o.id); if(o.buyCity){ (byCity[o.buyCity]=byCity[o.buyCity]||[]).push(o.id); } });
         var jobs=Object.keys(byCity).map(function(city){ return fetchHistoryMulti(byCity[city],city,24,1).then(function(series){ return {city:city,series:series}; }).catch(function(){ return {city:city,series:null}; }); });
         Promise.all(jobs).then(function(results){
           var hist={}, haveHist=false;
           results.forEach(function(r){ var m=medVol(r.series); Object.keys(m).forEach(function(id){ hist[r.city+'|'+id]=m[id]; haveHist=true; }); });
+          var MINVOL=10, HARD_AGE=360; // vol mínimo/día y antigüedad máxima (6 h): sin esto, no confiamos en el dato
           var valid=cand.filter(function(o){
             var h=hist[o.sellCity+'|'+o.id];
-            if(!h) return !haveHist && o.sellPrice<=o.cap*8;   // sin histórico del item = casi seguro fantasma/muerto
-            o.vol=h.vol;
-            if(o.sellPrice>h.med*2.5) return false;             // muy por encima de la mediana real → inventado
+            if(!h) return false;                                // sin histórico real = NO lo mostramos (antes lo dejaba pasar)
+            o.vol=h.vol; o.med=h.med;
+            if(o.sellPrice>h.med*2.2) return false;             // venta muy por encima de la mediana real → precio fantasma
+            var hb=hist[o.buyCity+'|'+o.id];                    // valida la PATA DE COMPRA contra la mediana de SU ciudad
+            if(hb && hb.med && o.cap<hb.med*0.5) return false;  // compra a menos de la mitad de la mediana → precio fantasma/viejo
+            if(o.vol<MINVOL) return false;                      // se vende muy poco/día = no confiable ni colocable
+            o.buyAge=dataAge(o.buyDate); o.sellAge=dataAge(o.sellDate);
+            var worst=Math.max(o.buyAge==null?9e9:o.buyAge, o.sellAge==null?9e9:o.sellAge);
+            if(worst>HARD_AGE) return false;                    // algún precio con > 6 h → lo descartamos (evita el "compra fantasma")
+            o.age=worst; o.solid=(worst<=60 && o.vol>=30);      // "sólido" = datos frescos (≤1 h) y con volumen
             return true;
           });
-          var top=(valid.length?valid:cand.filter(function(o){ return o.sellPrice<=o.cap*8; })).slice(0,14);
-          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades <b>reales</b> ahora mismo (descartamos los precios fantasma). Volvé en un rato — el mercado cambia todo el tiempo.','No <b>real</b> opportunities right now (we filtered out phantom prices). Come back later — the market changes all the time.')+'</div>'; return; }
+          // Orden por CONFIANZA: fresco + con volumen primero, después por ROI (no solo ROI, que premiaba fantasmas).
+          valid.sort(function(a,b){
+            function sc(o){ return o.roi*Math.min(1.5,o.vol/60)*(o.age<60?1:o.age<180?0.6:0.35); }
+            return sc(b)-sc(a);
+          });
+          var top=valid.slice(0,14);
+          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades <b>reales y frescas</b> ahora mismo. Descartamos precios fantasma, datos viejos (+6 h) y items de muy poco volumen. Volvé en un rato o probá otro servidor.','No <b>real, fresh</b> opportunities right now. We filter out phantom prices, stale data (+6 h) and very low-volume items. Come back later or try another server.')+'</div>'; return; }
           planData=top;
           renderPlanCards();
         });
