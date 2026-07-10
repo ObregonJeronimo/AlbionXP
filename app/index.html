@@ -66,6 +66,9 @@
     .pos{color:var(--green)}.neg{color:var(--red)}
     .desc{max-width:740px;margin:2px auto 14px;text-align:center;color:var(--muted);font-size:14px;line-height:1.55}
     .desc b{color:var(--goldb)}
+    .plan-modes{display:flex;gap:8px;margin:2px 0}
+    .pmode{padding:9px 15px;border-radius:10px;border:1px solid var(--line2);background:var(--iron3);color:var(--muted);cursor:pointer;font-weight:700;font-size:13px}
+    .pmode.on{background:linear-gradient(180deg,var(--goldb),var(--gold));color:#1a1305;border-color:var(--gold)}
     .plan-recs{display:grid;gap:12px;margin-top:4px}
     .prec{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--iron2);display:flex;gap:14px;align-items:center}
     .prec.top{border-color:var(--gold);background:rgba(217,164,65,.06)}
@@ -264,11 +267,20 @@
 
     <section id="tab-plan">
       <p class="desc"><b>Qué te conviene hacer AHORA.</b> Escaneamos el mercado en vivo y rankeamos las mejores oportunidades reales del momento (transporte + mercado negro) según tu capital. No son plantillas: cambia todo el tiempo con el mercado.</p>
-      <div class="controls" style="margin-top:2px">
+      <div class="plan-modes">
+        <button class="pmode on" id="pm-auto">🔀 Mejores oportunidades</button>
+        <button class="pmode" id="pm-route">🗺️ Elegir ruta</button>
+      </div>
+      <div class="controls" style="margin-top:8px">
         <div><label>¿Cuánto capital tenés?</label>
           <select id="plan-cap"><option value="200000">200 mil (empezando)</option><option value="1000000" selected>1 millón</option><option value="5000000">5 millones</option><option value="20000000">20 millones</option></select>
         </div>
-        <button class="btn2" id="plan-go">Ver qué conviene ahora</button>
+        <div id="plan-auto-ctl"><button class="btn2" id="plan-go">Ver qué conviene ahora</button></div>
+        <div id="plan-route-ctl" hidden style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div><label>Origen (comprar)</label><select id="route-from"></select></div>
+          <div><label>Destino (vender)</label><select id="route-to"></select></div>
+          <button class="btn2" id="route-go">Buscar en esta ruta</button>
+        </div>
       </div>
       <div id="plan-results"><p style="text-align:center;color:var(--muted);padding:26px 10px">Elegí tu capital y te digo, con datos reales de este momento, las mejores jugadas para ganar plata.</p></div>
     </section>
@@ -850,6 +862,16 @@
     $('plan-go').addEventListener('click',runPlan);
     // Al cambiar el capital, recalculamos las cards al instante (sin volver a pedir el mercado).
     $('plan-cap').addEventListener('change',function(){ if(planData) renderPlanCards(); });
+    // Modo Plan: "mejores oportunidades" (auto) vs "elegir ruta" (origen→destino).
+    (function(){
+      var opts=CITIES.map(function(c){ return '<option>'+c+'</option>'; }).join('');
+      if($('route-from')){ $('route-from').innerHTML=opts; $('route-from').value='Fort Sterling'; }
+      if($('route-to')){ $('route-to').innerHTML=opts; $('route-to').value='Caerleon'; }
+      function setMode(m){ $('pm-auto').classList.toggle('on',m==='auto'); $('pm-route').classList.toggle('on',m==='route'); $('plan-auto-ctl').hidden=(m!=='auto'); $('plan-route-ctl').hidden=(m!=='route'); }
+      if($('pm-auto')) $('pm-auto').addEventListener('click',function(){ setMode('auto'); });
+      if($('pm-route')) $('pm-route').addEventListener('click',function(){ setMode('route'); });
+      if($('route-go')) $('route-go').addEventListener('click',runPlanRoute);
+    })();
     var planData=null;
     // Dibuja las cards del Plan usando el capital actual: cuánto comprar, cuánto invertir y cuánto ganar.
     function renderPlanCards(){
@@ -900,40 +922,60 @@
           });
         }
         if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades claras ahora mismo. Probá otro servidor o volvé en un rato — el mercado cambia todo el tiempo.','No clear opportunities right now. Try another server or come back later — the market changes all the time.')+'</div>'; return; }
-        ops.sort(function(x,y){ return y.roi-x.roi; });
-        var cand=ops.slice(0,80);
-        // VALIDACIÓN ANTI-FANTASMA: pedimos el histórico (últimos 7 días) por ciudad de venta y
-        // descartamos precios muy por encima de la media real o items que casi no se venden.
-        var byCity={}; cand.forEach(function(o){ (byCity[o.sellCity]=byCity[o.sellCity]||[]).push(o.id); if(o.buyCity){ (byCity[o.buyCity]=byCity[o.buyCity]||[]).push(o.id); } });
-        var jobs=Object.keys(byCity).map(function(city){ return fetchHistoryMulti(byCity[city],city,24,1).then(function(series){ return {city:city,series:series}; }).catch(function(){ return {city:city,series:null}; }); });
-        Promise.all(jobs).then(function(results){
-          var hist={}, haveHist=false;
-          results.forEach(function(r){ var m=medVol(r.series); Object.keys(m).forEach(function(id){ hist[r.city+'|'+id]=m[id]; haveHist=true; }); });
-          var MINVOL=10, HARD_AGE=360; // vol mínimo/día y antigüedad máxima (6 h): sin esto, no confiamos en el dato
-          var valid=cand.filter(function(o){
-            var h=hist[o.sellCity+'|'+o.id];
-            if(!h) return false;                                // sin histórico real = NO lo mostramos (antes lo dejaba pasar)
-            o.vol=h.vol; o.med=h.med;
-            if(o.sellPrice>h.med*2.2) return false;             // venta muy por encima de la mediana real → precio fantasma
-            var hb=hist[o.buyCity+'|'+o.id];                    // valida la PATA DE COMPRA contra la mediana de SU ciudad
-            if(hb && hb.med && o.cap<hb.med*0.5) return false;  // compra a menos de la mitad de la mediana → precio fantasma/viejo
-            if(o.vol<MINVOL) return false;                      // se vende muy poco/día = no confiable ni colocable
-            o.buyAge=dataAge(o.buyDate); o.sellAge=dataAge(o.sellDate);
-            var worst=Math.max(o.buyAge==null?9e9:o.buyAge, o.sellAge==null?9e9:o.sellAge);
-            if(worst>HARD_AGE) return false;                    // algún precio con > 6 h → lo descartamos (evita el "compra fantasma")
-            o.age=worst; o.solid=(worst<=60 && o.vol>=30);      // "sólido" = datos frescos (≤1 h) y con volumen
-            return true;
-          });
-          // Orden por CONFIANZA: fresco + con volumen primero, después por ROI (no solo ROI, que premiaba fantasmas).
-          valid.sort(function(a,b){
-            function sc(o){ return o.roi*Math.min(1.5,o.vol/60)*(o.age<60?1:o.age<180?0.6:0.35); }
-            return sc(b)-sc(a);
-          });
-          var top=valid.slice(0,14);
-          if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades <b>reales y frescas</b> ahora mismo. Descartamos precios fantasma, datos viejos (+6 h) y items de muy poco volumen. Volvé en un rato o probá otro servidor.','No <b>real, fresh</b> opportunities right now. We filter out phantom prices, stale data (+6 h) and very low-volume items. Come back later or try another server.')+'</div>'; return; }
-          planData=top;
-          renderPlanCards();
+        finalizePlanOps(ops, out);
+      }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
+    }
+    // Validación anti-fantasma + frescura + volumen, común a "mejores oportunidades" y "elegir ruta".
+    function finalizePlanOps(ops, out){
+      ops.sort(function(x,y){ return y.roi-x.roi; });
+      var cand=ops.slice(0,80);
+      var byCity={}; cand.forEach(function(o){ (byCity[o.sellCity]=byCity[o.sellCity]||[]).push(o.id); if(o.buyCity){ (byCity[o.buyCity]=byCity[o.buyCity]||[]).push(o.id); } });
+      var jobs=Object.keys(byCity).map(function(city){ return fetchHistoryMulti(byCity[city],city,24,1).then(function(series){ return {city:city,series:series}; }).catch(function(){ return {city:city,series:null}; }); });
+      Promise.all(jobs).then(function(results){
+        var hist={};
+        results.forEach(function(r){ var m=medVol(r.series); Object.keys(m).forEach(function(id){ hist[r.city+'|'+id]=m[id]; }); });
+        var MINVOL=10, HARD_AGE=360; // vol mínimo/día y antigüedad máxima (6 h)
+        var valid=cand.filter(function(o){
+          var h=hist[o.sellCity+'|'+o.id];
+          if(!h) return false;                                // sin histórico real = NO lo mostramos
+          o.vol=h.vol; o.med=h.med;
+          if(o.sellPrice>h.med*2.2) return false;             // venta muy por encima de la mediana → fantasma
+          var hb=hist[o.buyCity+'|'+o.id];                    // pata de COMPRA vs mediana de su ciudad
+          if(hb && hb.med && o.cap<hb.med*0.5) return false;  // compra <½ de la mediana → fantasma/viejo
+          if(o.vol<MINVOL) return false;                      // muy poco volumen/día
+          o.buyAge=dataAge(o.buyDate); o.sellAge=dataAge(o.sellDate);
+          var worst=Math.max(o.buyAge==null?9e9:o.buyAge, o.sellAge==null?9e9:o.sellAge);
+          if(worst>HARD_AGE) return false;                    // algún precio con > 6 h
+          o.age=worst; o.solid=(worst<=60 && o.vol>=30);
+          return true;
         });
+        valid.sort(function(a,b){ function sc(o){ return o.roi*Math.min(1.5,o.vol/60)*(o.age<60?1:o.age<180?0.6:0.35); } return sc(b)-sc(a); });
+        var top=valid.slice(0,14);
+        if(!top.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay oportunidades <b>reales y frescas</b> ahora mismo. Descartamos precios fantasma, datos viejos (+6 h) y items de muy poco volumen. Volvé en un rato o probá otro servidor.','No <b>real, fresh</b> opportunities right now. We filter out phantom prices, stale data (+6 h) and very low-volume items. Come back later or try another server.')+'</div>'; return; }
+        planData=top;
+        renderPlanCards();
+      });
+    }
+    // Modo "Elegir ruta": el usuario define origen (comprar) y destino (vender); mostramos los mejores items
+    // de ESA ruta con la misma validación de frescura/volumen.
+    function runPlanRoute(){
+      var from=$('route-from').value, to=$('route-to').value, out=$('plan-results');
+      if(from===to){ out.innerHTML='<div class="err">'+L('Elegí una ciudad de origen y una de destino distintas.','Pick a different origin and destination city.')+'</div>'; return; }
+      out.innerHTML='<div class="loading"><span class="spin"></span>'+L('Buscando los mejores items para llevar de ','Finding the best items to carry from ')+esc(from)+L(' a ',' to ')+esc(to)+L(' y validando contra el histórico…',' and validating against history…')+'</div>';
+      var feeR=sellFees(STATE.premium), gear=gearUniverse([4,5,6],[0,1]);
+      Promise.all([ fetchPricesMulti(liquidUniverse(), [from,to], 1), fetchPricesMulti(gear, [from,to], 1) ]).then(function(a){
+        var all=(Array.isArray(a[0])?a[0]:[]).concat(Array.isArray(a[1])?a[1]:[]);
+        if(!all.length){ out.innerHTML='<div class="err">'+L('El proxy de precios no respondió.','The price proxy did not respond.')+'</div>'; return; }
+        var byItem={};
+        all.forEach(function(p){ if(!fresh2(p)) return; (byItem[p.item_id]=byItem[p.item_id]||{})[p.city]={sell:p.sell_price_min,date:p.sell_price_min_date}; });
+        var ops=[];
+        Object.keys(byItem).forEach(function(id){ var b=byItem[id][from], s=byItem[id][to]; if(!b||!s||!b.sell||!s.sell) return;
+          if(s.sell>b.sell*30) return;
+          var net=(s.sell-1)*(1-feeR)-b.sell; if(net<=0) return; var roi=net/b.sell; if(roi<0.05) return;
+          ops.push({m:L('Transporte','Transport'),id:id,net:net,roi:roi,cap:b.sell,risk:(from==='Caerleon'||to==='Caerleon'),buyCity:from,sellCity:to,sellPrice:s.sell,buyDate:b.date,sellDate:s.date,dt:L('Comprá en ','Buy in ')+from+' ('+fmt(b.sell)+')'+L(' y vendé en ',' and sell in ')+to+' ('+fmt(s.sell)+')'});
+        });
+        if(!ops.length){ out.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay rutas rentables de ','No profitable routes from ')+esc(from)+L(' a ',' to ')+esc(to)+L(' ahora mismo. Probá otro destino.',' right now. Try another destination.')+'</div>'; return; }
+        finalizePlanOps(ops, out);
       }).catch(function(err){ out.innerHTML='<div class="err">Error: '+esc(err.message||String(err))+'</div>'; });
     }
 
@@ -1138,8 +1180,12 @@
         foro:'<b>Community.</b> Share routes, questions and findings with other players. Anyone can read; to post, comment or vote, sign in with Google. It\'s moderated to keep it clean.'
       };
       Object.keys(DESC).forEach(function(k){ var d=document.querySelector('#tab-'+k+' .desc'); if(d) d.innerHTML=DESC[k]; });
-      var BTN={'plan-go':'See what\'s worth it now','ref-go':'Calculate','craft-go':'Scan crafting → Black Market','flip-go':'Find transport routes','mn-go':'Scan Black Market','snp-go':'Find deals','vol-go':'Analyze'};
+      var BTN={'plan-go':'See what\'s worth it now','ref-go':'Calculate','craft-go':'Scan crafting → Black Market','flip-go':'Find transport routes','mn-go':'Scan Black Market','snp-go':'Find deals','vol-go':'Analyze','route-go':'Search this route'};
       Object.keys(BTN).forEach(function(id){ var b=document.getElementById(id); if(b) b.textContent=BTN[id]; });
+      if($('pm-auto')) $('pm-auto').textContent='🔀 Best opportunities';
+      if($('pm-route')) $('pm-route').textContent='🗺️ Choose route';
+      var rfl=document.querySelector('#route-from'); if(rfl){ var lf=rfl.parentNode.querySelector('label'); if(lf) lf.textContent='Origin (buy)'; }
+      var rtl=document.querySelector('#route-to'); if(rtl){ var lt2=rtl.parentNode.querySelector('label'); if(lt2) lt2.textContent='Destination (sell)'; }
       var flipHint=document.querySelector('#tab-transporte .controls span'); if(flipHint) flipHint.textContent='Compares resources, food and potions across the 7 cities. Takes a few seconds.';
       var mnHint=document.querySelector('#tab-mn .controls span'); if(mnHint) mnHint.textContent='Gear the Caerleon BM pays more for than its city price. Takes a few seconds.';
       var WINOPT={'24':'Last 24 h','48':'Last 48 h','168':'Last 7 days'};
