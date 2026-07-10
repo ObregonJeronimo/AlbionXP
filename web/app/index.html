@@ -117,6 +117,8 @@
     .favbar .fav-lbl{width:100%;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);margin-bottom:2px}
     .favbar .fav-empty{font-size:12.5px;color:var(--faint);text-align:center}
     .favchip{display:inline-flex;align-items:center;gap:6px;background:var(--iron2);border:1px solid var(--line2);border-radius:20px;padding:4px 8px 4px 5px;cursor:pointer;font-size:13px;color:var(--text);transition:border-color .12s}
+    .fbtn2{width:100%;margin-top:6px;font-family:'Cinzel',serif;font-weight:700;font-size:12.5px;background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:9px;padding:8px 14px;cursor:pointer}
+    .fbtn2:hover{background:rgba(217,164,65,.1)}
     .favchip:hover{border-color:var(--gold)}
     .favchip img{width:24px;height:24px}
     .favchip .x{color:var(--faint);font-size:13px;padding:0 2px;border-radius:50%}
@@ -490,12 +492,41 @@
       var bar=$('favbar'); if(!bar) return; var f=getFavs();
       if(!f.length){ bar.innerHTML='<span class="fav-empty">'+L('☆ Marcá items con la estrella y quedan acá para chequear su precio al toque.','☆ Star items to keep them here and check their price in one tap.')+'</span>'; return; }
       bar.innerHTML='<span class="fav-lbl">'+L('⭐ Tus favoritos','⭐ Your favorites')+'</span>'+f.map(function(id){ var e=BYID[id]||{id:id,es:id,tier:parseTier(id),ench:parseEnch(id)};
-        return '<span class="favchip" data-id="'+esc(id)+'"><img loading="lazy" src="'+icon(id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(String(iName(e)||id).slice(0,24))+'<span class="x" data-rm="'+esc(id)+'" title="'+L('Quitar','Remove')+'">✕</span></span>'; }).join('');
+        return '<span class="favchip" data-id="'+esc(id)+'"><img loading="lazy" src="'+icon(id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+(e.tier?tierTag(e.tier,e.ench)+' ':'')+esc(String(iName(e)||id).slice(0,24))+'<span class="x" data-rm="'+esc(id)+'" title="'+L('Quitar','Remove')+'">✕</span></span>'; }).join('')
+        +'<button class="fbtn2" id="fav-sell" type="button">💰 '+L('¿Dónde vendo esto?','Where do I sell this?')+'</button>';
     }
     $('favbar').addEventListener('click',function(ev){
       var rm=ev.target.closest('.x'); if(rm){ ev.stopPropagation(); toggleFav(rm.getAttribute('data-rm')); return; }
+      if(ev.target.closest('#fav-sell')){ whereToSell(); return; }
       var chip=ev.target.closest('.favchip'); if(chip){ selectItem(chip.getAttribute('data-id')); var p=$('panel'); if(p) p.scrollIntoView({block:'nearest'}); }
     });
+    // "¿Dónde vendo esto?": para cada favorito, la mejor opción de venta (listando vs al instante) y en qué ciudad.
+    function whereToSell(){
+      var f=getFavs(); if(!f.length) return; var panel=$('panel'); if(!panel) return;
+      panel.innerHTML='<div class="loading"><span class="spin"></span>'+L('Buscando dónde vender tus favoritos…','Finding where to sell your favorites…')+'</div>';
+      var instFee=instFees(STATE.premium), sellFee=sellFees(STATE.premium);
+      Promise.all(f.slice(0,20).map(function(id){ return fetchPrices(id, STATE.quality).then(function(data){ return {id:id,data:data}; }).catch(function(){ return {id:id,data:null}; }); })).then(function(res){
+        var rows=res.map(function(r){
+          if(!Array.isArray(r.data)) return null;
+          var bList=null, bInst=null;
+          r.data.forEach(function(p){
+            var sF=p.sell_price_min && (''+p.sell_price_min_date).indexOf(NO_DATE)!==0;
+            if(sF && (!bList||p.sell_price_min>bList.price)) bList={price:p.sell_price_min,city:p.city,date:p.sell_price_min_date};
+            if(p.buy_price_max && (''+p.buy_price_max_date).indexOf(NO_DATE)!==0 && (!bInst||p.buy_price_max>bInst.price)) bInst={price:p.buy_price_max,city:p.city,date:p.buy_price_max_date};
+          });
+          if(!bList && !bInst) return null;
+          return {id:r.id, list:bList, listNet:bList?Math.round(bList.price*(1-sellFee)):0, inst:bInst, instNet:bInst?Math.round(bInst.price*(1-instFee)):0};
+        }).filter(Boolean);
+        if(!rows.length){ panel.innerHTML='<div class="err" style="border-color:var(--line2);background:rgba(0,0,0,.22);color:var(--muted)">'+L('No hay precios frescos de tus favoritos ahora. Probá más tarde.','No fresh prices for your favorites right now. Try again later.')+'</div>'; return; }
+        rows.sort(function(a,b){ return Math.max(b.listNet,b.instNet)-Math.max(a.listNet,a.instNet); });
+        var body=rows.map(function(r){ var e=BYID[r.id]||{id:r.id}; var listBest=r.listNet>=r.instNet;
+          return '<tr><td class="txt"><span class="icell"><img loading="lazy" src="'+icon(r.id,1)+'" onerror="this.style.visibility=\'hidden\'"/>'+esc(iName(e)||r.id)+'</span></td>'+
+            '<td class="'+(listBest?'pos':'')+'">'+(r.list?fmt(r.listNet)+' <span style="color:var(--muted);font-size:12px">('+esc(r.list.city)+')</span>':'—')+'</td>'+
+            '<td class="'+(!listBest?'pos':'')+'">'+(r.inst?fmt(r.instNet)+' <span style="color:var(--muted);font-size:12px">('+esc(r.inst.city)+')</span>':'—')+'</td></tr>';
+        }).join('');
+        panel.innerHTML='<div class="panel"><div class="phead" style="padding:14px 18px"><h2 style="font-size:17px">💰 '+L('Dónde vender tus favoritos','Where to sell your favorites')+'</h2></div><div class="tw"><table class="ptable rtable"><thead><tr><th class="txt">Item</th><th>'+L('Listando (neto)','Listing (net)')+qh('listar')+'</th><th>'+L('Al instante (neto)','Instant (net)')+qh('instante')+'</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="pnote">'+L('<b>Verde</b> = la mejor opción para ese item. <b>Listando</b> = ponés orden de venta al precio de mercado (ganás más, tardás). <b>Al instante</b> = vendés a la orden de compra más alta (cobrás ya, un poco menos). Todo neto, con impuesto y comisión descontados.','<b>Green</b> = the best option for that item. <b>Listing</b> = you place a sell order at market price (more silver, takes time). <b>Instant</b> = you sell to the highest buy order (paid now, a bit less). All net, tax and fee deducted.')+'</p></div>';
+      }).catch(function(e){ panel.innerHTML='<div class="err">Error: '+esc(e.message||String(e))+'</div>'; });
+    }
 
     // ---------- panel de precios ----------
     var panel=$('panel');
@@ -1275,7 +1306,9 @@
       descuento:{t:['Descuento','Discount'],b:['Cuánto <b>más barato</b> está el listado respecto de su media de 7 días. Más descuento = mejor ganga (comprás bajo y revendés al precio normal).','How much <b>cheaper</b> the listing is versus its 7-day median. Bigger discount = better deal (buy low, resell at the normal price).']},
       ganrelist:{t:['Ganancia relist','Relist profit'],b:['Lo que ganás si comprás la ganga y la <b>volvés a listar</b> al precio de mercado en la <b>misma ciudad</b> (sin transporte, sin riesgo), ya con impuesto y comisión descontados.','What you make if you buy the deal and <b>relist</b> it at market price in the <b>same city</b> (no transport, no risk), with tax and fee already deducted.']},
       volumen:{t:['Volumen','Volume'],b:['Cuántas unidades se <b>venden por día</b>. Ojo con la <b>liquidez</b>: un descuentazo en algo de volumen bajo puede tardar días en revenderse.','How many units <b>sell per day</b>. Watch the <b>liquidity</b>: a huge discount on something low-volume can take days to resell.']},
-      vstier:{t:['vs su tier','vs its tier'],b:['Cuánto <b>más o menos</b> se paga ese recurso comparado con el <b>promedio de los 5 recursos de su mismo tier</b> (mineral, madera, fibra, piel, piedra). Positivo = está caro ahora respecto de sus pares → es el que <b>más conviene juntar</b>. Sube y baja con la oferta/demanda del momento.','How much <b>more or less</b> that resource is paid vs the <b>average of the 5 resources of its tier</b> (ore, wood, fiber, hide, stone). Positive = it\'s pricey right now vs its peers → the <b>best one to gather</b>. It moves with current supply/demand.']}
+      vstier:{t:['vs su tier','vs its tier'],b:['Cuánto <b>más o menos</b> se paga ese recurso comparado con el <b>promedio de los 5 recursos de su mismo tier</b> (mineral, madera, fibra, piel, piedra). Positivo = está caro ahora respecto de sus pares → es el que <b>más conviene juntar</b>. Sube y baja con la oferta/demanda del momento.','How much <b>more or less</b> that resource is paid vs the <b>average of the 5 resources of its tier</b> (ore, wood, fiber, hide, stone). Positive = it\'s pricey right now vs its peers → the <b>best one to gather</b>. It moves with current supply/demand.']},
+      listar:{t:['Vender listando','Selling by listing'],b:['Ponés una <b>orden de venta</b> al precio de mercado y esperás a que alguien compre. Ganás <b>más</b>, pero puede tardar. El número es lo <b>neto</b> (ya con impuesto y comisión de orden descontados).','You place a <b>sell order</b> at market price and wait for a buyer. You get <b>more</b>, but it can take time. The number is <b>net</b> (sales tax and order fee already deducted).']},
+      instante:{t:['Vender al instante','Selling instantly'],b:['Le vendés a la <b>orden de compra</b> más alta que ya existe: cobrás <b>al toque</b>, sin esperar, pero un poco menos. El número es lo <b>neto</b> (solo impuesto, sin comisión de orden).','You sell to the highest existing <b>buy order</b>: paid <b>instantly</b>, no waiting, but a bit less. The number is <b>net</b> (sales tax only, no order fee).']}
     };
     function qh(key){ return '<span class="qh" data-q="'+key+'" role="button" tabindex="0" aria-label="'+L('Ayuda','Help')+'">?</span>'; }
     function openHelp(key){
