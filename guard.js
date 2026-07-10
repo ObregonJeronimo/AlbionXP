@@ -4,6 +4,10 @@
    (herramientas), no en la landing. Nombre de archivo neutro a propósito para
    que el propio adblock no lo bloquee. */
 (function () {
+  // Muro DESACTIVADO a propósito: en Reddit/comunidades un anti-adblock wall
+  // genera rechazo inmediato. Para reactivarlo, poné ENABLED = true.
+  var ENABLED = false;
+  if (!ENABLED) return;
   var KEY = '1d84b06ebcdbf4d27880331ce7a9f3ea';
   var DON = (window.SITE && window.SITE.donateUrl) || 'https://cafecito.app/albionxp';
   var shown = false;
