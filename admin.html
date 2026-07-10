@@ -44,7 +44,7 @@
   <div id="page">
     <div class="admin">
       <h1>Panel de control</h1>
-      <p class="sub">Privado — solo los dueños del proyecto.</p>
+      <p class="sub">Privado — solo los dueños del proyecto. Visitas de la web e ingresos.</p>
 
       <!-- No logueado / no autorizado -->
       <div id="gate" class="gate" style="display:none">
@@ -60,29 +60,24 @@
         </div>
 
         <div class="setup">
-          <button class="btn" id="load">Actualizar</button>
-          <span class="muted">Se lee directo de GitHub y Firebase — sin servidor propio que desplegar.</span>
+          <button class="btn" id="load">🔄 Actualizar</button>
+          <span class="muted">Visitas: directo de Firebase con tu login. Ingresos: en los paneles oficiales.</span>
         </div>
         <div id="msg"></div>
 
         <div id="dash" style="display:none">
           <div class="grid">
-            <div class="metric live"><div class="k">Online ahora</div><div class="v"><span class="dot"></span><span id="m-online">—</span></div><div class="s">con la app abierta (últimos ~6 min)</div></div>
-            <div class="metric"><div class="k">Descargas</div><div class="v" id="m-downloads">—</div><div class="s">total del instalador</div></div>
-            <div class="metric"><div class="k">Visitas hoy</div><div class="v" id="m-vtoday">—</div><div class="s">a la web</div></div>
-            <div class="metric"><div class="k">Visitas totales</div><div class="v" id="m-vtotal">—</div></div>
+            <div class="metric"><div class="k">Visitas totales</div><div class="v" id="m-vtotal">—</div><div class="s">a la web</div></div>
+            <div class="metric"><div class="k">Visitas hoy</div><div class="v" id="m-vtoday">—</div></div>
+            <div class="metric"><div class="k">Ingresos Adsterra</div><div class="v" id="m-rev">—</div><div class="s" id="m-rev-s">ver panel de Adsterra ↓</div></div>
           </div>
 
-          <div class="section-t">Descargas por versión</div>
-          <table class="vtable"><tbody id="ver-rows"></tbody></table>
-
-          <div class="section-t">Ingresos (paneles oficiales)</div>
-          <p class="muted" style="margin-bottom:10px">Estas plataformas no dan una API pública simple de ganancias; el monto exacto se ve en su panel. Acceso directo:</p>
+          <div class="section-t">Ingresos</div>
           <div class="rev">
-            <a id="l-cpm" href="#" target="_blank" rel="noopener"><div class="rk">CPM · Monetag</div><div class="rs">Ganancias de anuncios e impresiones</div></a>
-            <a id="l-cafecito" href="#" target="_blank" rel="noopener"><div class="rk">Donaciones · Cafecito</div><div class="rs">Cafecitos recibidos</div></a>
-            <a id="l-mp" href="#" target="_blank" rel="noopener"><div class="rk">Mercado Pago</div><div class="rs">Movimientos, donaciones y cripto</div></a>
+            <a id="l-adsterra" href="https://publishers.adsterra.com/statistics" target="_blank" rel="noopener"><div class="rk">Adsterra · Anuncios</div><div class="rs">Ganancias, impresiones y CPM — se ven en el panel de Adsterra</div></a>
+            <a id="l-cafecito" href="https://cafecito.app/dashboard" target="_blank" rel="noopener"><div class="rk">Cafecito · Donaciones</div><div class="rs">Cafecitos recibidos</div></a>
           </div>
+          <p class="muted" style="margin-top:10px">La ganancia exacta de Adsterra se ve en su panel. Para mostrarla acá en vivo (con el botón Actualizar) hace falta cargar la <b>API token de Adsterra</b> — avisá y lo enchufo.</p>
 
           <p class="muted" id="updated" style="margin-top:22px"></p>
         </div>
@@ -123,8 +118,7 @@
         $('who-email').textContent = user.email;
         $('gate').style.display = 'none';
         $('panel').style.display = '';
-        loadDownloads(); loadLive();          // descargas 1 vez; online se refresca solo
-        timer = setInterval(loadLive, 25000);
+        loadStats();
       } else if (user) {
         // logueado pero NO autorizado
         currentUser = null;
@@ -140,45 +134,14 @@
       }
     });
 
-    // Descargas: directo de la API PÚBLICA de GitHub. Sin backend, sin login siquiera.
-    // (Se llama 1 vez al entrar + con el botón: la API sin token permite 60 req/hora.)
-    async function loadDownloads() {
+    // Visitas: directo de Firestore con TU token de dueño (las reglas solo dejan leer
+    // esto a los dueños). El contador lo incrementa el worker en cada visita (/hit).
+    async function loadStats() {
       $('dash').style.display = '';
-      try {
-        const rels = await (await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`,
-          { headers: { Accept: 'application/vnd.github+json' } })).json();
-        let total = 0; const byVer = [];
-        for (const rel of (Array.isArray(rels) ? rels : [])) {
-          let n = 0;
-          for (const a of (rel.assets || [])) if ((a.name || '').endsWith('.exe')) n += a.download_count || 0;
-          if (n) byVer.push({ tag: rel.tag_name, n });
-          total += n;
-        }
-        $('m-downloads').textContent = fmt(total);
-        $('ver-rows').innerHTML = byVer.map(v => `<tr><td>${v.tag}</td><td>${fmt(v.n)}</td></tr>`).join('')
-          || '<tr><td class="muted">Sin descargas aún</td><td>0</td></tr>';
-      } catch (e) { $('m-downloads').textContent = '—'; }
-      $('l-cpm').href = 'https://monetag.com/';
-      $('l-cafecito').href = 'https://cafecito.app/dashboard';
-      $('l-mp').href = 'https://www.mercadopago.com.ar/activities';
-    }
-
-    // Online + visitas: directo de Firestore con TU token de dueño (las reglas solo
-    // dejan leer esto a los dueños). Muestran 0 hasta que la app registre presencia.
-    async function loadLive() {
       if (!currentUser) return;
+      $('msg').textContent = 'Cargando…'; $('msg').className = '';
       const token = await currentUser.getIdToken().catch(() => null);
-      if (!token) return;
-      try {
-        const r = await fetch(`${FS}/presence?pageSize=1000`, { headers: { Authorization: 'Bearer ' + token } });
-        if (r.ok) {
-          const docs = (await r.json()).documents || [];
-          const cutoff = Date.now() - 360000; // ~6 min
-          let online = 0;
-          for (const d of docs) if (Number((d.fields && d.fields.t && d.fields.t.integerValue) || 0) >= cutoff) online++;
-          $('m-online').textContent = fmt(online);
-        } else { $('m-online').textContent = '0'; }
-      } catch (e) { $('m-online').textContent = '0'; }
+      if (!token) { $('msg').textContent = ''; return; }
       try {
         const r = await fetch(`${FS}/stats/counters`, { headers: { Authorization: 'Bearer ' + token } });
         if (r.ok) {
@@ -188,9 +151,10 @@
           $('m-vtoday').textContent = fmt(Number((f[dk] && f[dk].integerValue) || 0));
         } else { $('m-vtotal').textContent = '0'; $('m-vtoday').textContent = '0'; }
       } catch (e) { /* sin datos aún */ }
+      $('msg').textContent = '';
       $('updated').textContent = 'Actualizado: ' + new Date().toLocaleString('es');
     }
-    $('load').addEventListener('click', () => { loadDownloads(); loadLive(); });
+    $('load').addEventListener('click', loadStats);
   </script>
 </body>
 </html>
